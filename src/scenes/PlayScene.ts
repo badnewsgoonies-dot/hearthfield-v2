@@ -17,6 +17,7 @@ import { WeatherSystem, WeatherType } from '../systems/weather';
 import type { TouchInputState } from '../systems/touchControls';
 import { QuestSystem, QuestSystemState } from '../systems/quests';
 import { AnimalSystem } from '../systems/animals';
+import { ANIMAL_DEFS } from '../data/animalData';
 import { RomanceSystem, RomanceState } from '../systems/romance';
 import { UpgradeSystem, UpgradeState } from '../systems/upgrades';
 import { MachineSystem, MachineState } from '../systems/machines';
@@ -56,6 +57,7 @@ export class PlayScene extends Phaser.Scene {
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   foragingSprites: Phaser.GameObjects.Sprite[] = [];
+  farmAnimalSprites: { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; targetX: number; targetY: number; timer: number }[] = [];
   solidTiles: Set<string> = new Set();
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
   private dayNightOverlay?: Phaser.GameObjects.Rectangle;
@@ -126,6 +128,7 @@ export class PlayScene extends Phaser.Scene {
 
     // Spawn NPCs
     this.spawnNPCs();
+    this.refreshFarmAnimals();
 
     // Input
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -234,13 +237,21 @@ export class PlayScene extends Phaser.Scene {
         [InteractionKind.BLACKSMITH]: 'Press E — Upgrade Tools',
         [InteractionKind.CARPENTER]: 'Press E — Upgrade House',
         [InteractionKind.FORAGEABLE]: 'Press E — Collect',
+        [InteractionKind.ENTER_BUILDING]: 'Press E — Enter',
       };
-      this.proximityPrompt!.setText(kindLabels[interaction.kind] || 'Press E');
+      const label = kindLabels[interaction.kind] || 'Press E';
+      if (interaction.kind === InteractionKind.ENTER_BUILDING && interaction.building) {
+        const bName = interaction.building === 'house' ? 'Home' : interaction.building === 'coop' ? 'Coop' : 'Barn';
+        this.proximityPrompt!.setText(`Press E — Enter ${bName}`);
+      } else {
+        this.proximityPrompt!.setText(label);
+      }
       this.proximityPrompt!.setVisible(true);
     } else {
       this.proximityPrompt!.setVisible(false);
     }
     this.updateDayTimer(delta);
+    this.updateFarmAnimals(delta);
     this.updateDayNightVisual();
     this.updateCropSprites();
     this.playerSprite.setDepth(ySortDepth(this.player.y));
@@ -560,7 +571,7 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
-  private endDay() {
+  endDay() {
     this.dayTimer = 0;
     this.calendar.timeOfDay = 0;
 
@@ -625,6 +636,7 @@ export class PlayScene extends Phaser.Scene {
     // Auto save
     // Daily system ticks
     this.animalSystem.onDayStart();
+    this.refreshFarmAnimals();
     this.romanceSystem.onDayStart();
     this.machineSystem.onDayStart();
     this.foragingSystem.onDayStart(
@@ -906,6 +918,14 @@ export class PlayScene extends Phaser.Scene {
         case InteractionKind.SHOP:
           // UI listens directly to INTERACT(kind=SHOP); no PlayScene-side action needed here.
           break;
+        case InteractionKind.ENTER_BUILDING: {
+          const building = (data as any).building as 'house' | 'coop' | 'barn';
+          const bName = building === 'house' ? 'Home' : building === 'coop' ? 'Coop' : 'Barn';
+          this.events.emit(Events.TOAST, { message: `Entering ${bName}...`, color: '#aaccff' });
+          this.scene.pause(Scenes.PLAY);
+          this.scene.launch('InteriorScene', { playScene: this, building });
+          break;
+        }
         case InteractionKind.DOOR:
           // Mine entrance — launch the standalone MineScene
           this.events.emit(Events.TOAST, { message: 'Entering the mines...', color: '#aaccff' });
@@ -1316,8 +1336,11 @@ export class PlayScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(500);
   
     // Interactable objects with labels
-    this.createInteractable(22, 8, 2, InteractionKind.BED);
-    this.createInteractable(18, 8, 3, InteractionKind.KITCHEN);
+    // Building doors (lead to InteriorScene)
+    this.createInteractable(20, 9, 0, InteractionKind.ENTER_BUILDING, { building: 'house' });
+    this.createInteractable(28, 11, 0, InteractionKind.ENTER_BUILDING, { building: 'coop' });
+    this.createInteractable(32, 11, 0, InteractionKind.ENTER_BUILDING, { building: 'barn' });
+    
     this.createInteractable(12, 16, 1, InteractionKind.CRAFTING_BENCH);
     this.createInteractable(27, 12, 0, InteractionKind.SHIPPING_BIN);
     this.createInteractable(28, 23, 4, InteractionKind.SHOP);
@@ -1325,20 +1348,17 @@ export class PlayScene extends Phaser.Scene {
     this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
     this.createInteractable(17, 22, 7, InteractionKind.BLACKSMITH);
     this.createInteractable(10, 23, 7, InteractionKind.CARPENTER);
-    this.createInteractable(28, 10, 'Coop', InteractionKind.ANIMAL);
-    this.createInteractable(32, 10, 'Barn', InteractionKind.ANIMAL);
   
     this.addLabel(27, 12, 'Shipping Bin');
     this.addLabel(12, 16, 'Crafting Bench');
-    this.addLabel(22, 8, 'Bed');
-    this.addLabel(18, 8, 'Kitchen');
+    this.addLabel(20, 9, 'Home');
     this.addLabel(28, 23, 'Shop');
     this.addLabel(35, 4, 'Mine Entrance');
     this.addLabel(15, 23, 'Quest Board');
     this.addLabel(17, 22, 'Owen\'s Forge');
     this.addLabel(10, 23, 'Carpenter');
-    this.addLabel(28, 10, 'Coop');
-    this.addLabel(32, 10, 'Barn');
+    this.addLabel(28, 11, 'Coop');
+    this.addLabel(32, 11, 'Barn');
     this.addLabel(6, 18, 'Fishing Pond');
   }
 
@@ -1351,16 +1371,13 @@ export class PlayScene extends Phaser.Scene {
       if (tile.type === TileType.WATER) mark(tile.x, tile.y);
     }
     
-    // House — roof is solid, interior is walkable (bed at 22,8 / kitchen at 18,8)
+    // House — entire footprint is solid (interior is a separate scene now)
     for (let x = 17; x <= 23; x++) {
-      for (let y = 4; y <= 6; y++) {
-        mark(x, y); // roof + upper walls
+      for (let y = 4; y <= 8; y++) {
+        mark(x, y);
       }
     }
-    // Side walls of house (y=7-8)
-    mark(17, 7); mark(17, 8);
-    mark(23, 7); mark(23, 8);
-    // Entry: tiles 19-21, y=9 are open (south face door)
+    // House door tile (20, 9) is walkable — that's where ENTER_BUILDING trigger is
     
     // Trees — same positions as createWorldObjects
     const treePositions = [
@@ -1387,9 +1404,16 @@ export class PlayScene extends Phaser.Scene {
       }
     }
     
-    // Coop and Barn tops
-    for (let x = 27; x <= 29; x++) mark(x, 9);
-    for (let x = 31; x <= 33; x++) mark(x, 9);
+    // Coop and Barn — full footprint solid (interiors are separate scenes)
+    // Coop at tiles 27-29, y=8-10
+    for (let x = 27; x <= 29; x++) {
+      for (let y = 8; y <= 10; y++) mark(x, y);
+    }
+    // Barn at tiles 31-33, y=8-10
+    for (let x = 31; x <= 33; x++) {
+      for (let y = 8; y <= 10; y++) mark(x, y);
+    }
+    // Door tiles (28,11 and 32,11) are walkable — ENTER_BUILDING triggers there
     
     // Map border
     for (let x = -1; x <= FARM_WIDTH; x++) {
@@ -1402,7 +1426,7 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
-  private createInteractable(tileX: number, tileY: number, frameOrLabel: number | string, kind: InteractionKind) {
+  private createInteractable(tileX: number, tileY: number, frameOrLabel: number | string, kind: InteractionKind, data?: Record<string, any>) {
     const frameByKind: Partial<Record<InteractionKind, number>> = {
       [InteractionKind.BLACKSMITH]: 7,
       [InteractionKind.CARPENTER]: 7,
@@ -1413,7 +1437,7 @@ export class PlayScene extends Phaser.Scene {
     const spr = this.add.sprite(pos.x, pos.y, 'objects', frame);
     spr.setScale(SCALE);
     spr.setDepth(ySortDepth(pos.y));
-    spr.setData('interaction', { kind, x: tileX, y: tileY });
+    spr.setData('interaction', { kind, x: tileX, y: tileY, ...data });
     this.objectLayer.add(spr);
     if (label) this.addLabel(tileX, tileY, label);
   }
@@ -1445,6 +1469,75 @@ export class PlayScene extends Phaser.Scene {
         fontSize: '9px', color: '#ffffff', fontFamily: 'monospace',
         backgroundColor: '#00000088', padding: { x: 2, y: 1 },
       }).setOrigin(0.5).setDepth(ySortDepth(pos.y) + 1);
+    }
+  }
+
+  refreshFarmAnimals() {
+    // Remove old sprites
+    for (const a of this.farmAnimalSprites) {
+      a.sprite.destroy();
+      a.label.destroy();
+    }
+    this.farmAnimalSprites = [];
+
+    const animals = this.animalSystem.getState().animals;
+    if (animals.length === 0) return;
+
+    // Coop area: tiles around (27-29, 11-14), Barn area: tiles around (31-33, 11-14)
+    // Animals wander outside their buildings (buildings are solid now)
+    for (const animal of animals) {
+      const def = ANIMAL_DEFS.find((d: any) => d.id === animal.type);
+      if (!def) continue;
+      const isCoop = def.building === 'coop';
+      const baseX = isCoop ? 26 : 30;
+      const baseY = 11;
+      const rx = baseX + Phaser.Math.Between(0, 3);
+      const ry = baseY + Phaser.Math.Between(0, 3);
+      const pos = gridToWorld(rx, ry);
+      const frameIdx = animal.type === 'chicken' ? 0 : 1;
+      const spr = this.add.sprite(pos.x, pos.y, 'animals', frameIdx)
+        .setScale(SCALE).setDepth(ySortDepth(pos.y));
+
+      const lbl = this.add.text(pos.x, pos.y - SCALED_TILE * 0.6, animal.name, {
+        fontSize: '8px', color: '#ffeecc', fontFamily: 'monospace',
+        backgroundColor: '#00000088', padding: { x: 2, y: 1 },
+      }).setOrigin(0.5).setDepth(ySortDepth(pos.y) + 1);
+
+      // Status emoji
+      if (animal.productReady) {
+        const star = this.add.text(pos.x + 12, pos.y - 10, '✨', { fontSize: '10px' })
+          .setDepth(ySortDepth(pos.y) + 1);
+        this.time.delayedCall(3000, () => star.destroy());
+      }
+
+      this.farmAnimalSprites.push({
+        sprite: spr, label: lbl,
+        targetX: pos.x, targetY: pos.y,
+        timer: Phaser.Math.Between(2000, 6000),
+      });
+    }
+  }
+
+  private updateFarmAnimals(delta: number) {
+    for (const a of this.farmAnimalSprites) {
+      a.timer -= delta;
+      if (a.timer <= 0) {
+        // Pick new wander target near current position
+        a.targetX += Phaser.Math.Between(-SCALED_TILE, SCALED_TILE);
+        a.targetY += Phaser.Math.Between(-SCALED_TILE, SCALED_TILE);
+        // Clamp to area outside coop/barn
+        a.targetX = Phaser.Math.Clamp(a.targetX, 24 * SCALED_TILE, 35 * SCALED_TILE);
+        a.targetY = Phaser.Math.Clamp(a.targetY, 11 * SCALED_TILE, 15 * SCALED_TILE);
+        a.timer = Phaser.Math.Between(3000, 8000);
+      }
+      // Lerp toward target
+      const lerpSpeed = 0.001 * delta;
+      a.sprite.x += (a.targetX - a.sprite.x) * lerpSpeed;
+      a.sprite.y += (a.targetY - a.sprite.y) * lerpSpeed;
+      a.label.setPosition(a.sprite.x, a.sprite.y - SCALED_TILE * 0.6);
+      // Flip sprite based on direction
+      a.sprite.setFlipX(a.targetX < a.sprite.x);
+      a.sprite.setDepth(ySortDepth(a.sprite.y));
     }
   }
 
@@ -1555,7 +1648,7 @@ export class PlayScene extends Phaser.Scene {
     return this.farmTiles.find(t => t.x === x && t.y === y);
   }
 
-  private getInteractionAt(tileX: number, tileY: number): { kind: InteractionKind; targetId?: string; x: number; y: number } | null {
+  private getInteractionAt(tileX: number, tileY: number): { kind: InteractionKind; targetId?: string; x: number; y: number; building?: string } | null {
     // Check objects
     const objs = this.objectLayer.getAll();
     for (const obj of objs) {
