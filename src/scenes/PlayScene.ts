@@ -55,6 +55,7 @@ export class PlayScene extends Phaser.Scene {
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   foragingSprites: Phaser.GameObjects.Sprite[] = [];
+  solidTiles: Set<string> = new Set();
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
   private dayNightOverlay?: Phaser.GameObjects.Rectangle;
   private weatherParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -119,6 +120,7 @@ export class PlayScene extends Phaser.Scene {
 
     // Create objects (shipping bin, crafting bench, bed, etc.)
     this.createWorldObjects();
+    this.buildCollisionMap();
 
     // Spawn NPCs
     this.spawnNPCs();
@@ -394,8 +396,31 @@ export class PlayScene extends Phaser.Scene {
     }
 
     const speed = PLAYER_SPEED * this.weather.getSpeedModifier(this.currentWeather) * (delta / 1000);
-    this.player.x += vx * speed;
-    this.player.y += vy * speed;
+    
+    // Collision: check each axis independently for wall sliding
+    const halfBody = SCALED_TILE * 0.3; // collision radius
+    const newX = this.player.x + vx * speed;
+    const newY = this.player.y + vy * speed;
+    
+    // Check X movement
+    const testXtiles = [
+      worldToGrid(newX + halfBody, this.player.y + halfBody),
+      worldToGrid(newX + halfBody, this.player.y - halfBody),
+      worldToGrid(newX - halfBody, this.player.y + halfBody),
+      worldToGrid(newX - halfBody, this.player.y - halfBody),
+    ];
+    const xBlocked = testXtiles.some(t => this.solidTiles.has(`${t.x},${t.y}`));
+    if (!xBlocked) this.player.x = newX;
+    
+    // Check Y movement
+    const testYtiles = [
+      worldToGrid(this.player.x + halfBody, newY + halfBody),
+      worldToGrid(this.player.x + halfBody, newY - halfBody),
+      worldToGrid(this.player.x - halfBody, newY + halfBody),
+      worldToGrid(this.player.x - halfBody, newY - halfBody),
+    ];
+    const yBlocked = testYtiles.some(t => this.solidTiles.has(`${t.x},${t.y}`));
+    if (!yBlocked) this.player.y = newY;
 
     // Clamp to map
     this.player.x = clamp(this.player.x, SCALED_TILE / 2, FARM_WIDTH * SCALED_TILE - SCALED_TILE / 2);
@@ -866,22 +891,44 @@ export class PlayScene extends Phaser.Scene {
         case InteractionKind.QUEST_BOARD: {
           const available = this.questSystem.getAvailableQuests(this.calendar.season);
           const active = this.questSystem.getActiveQuests();
-          if (active.length > 0) {
-            const q = active[0];
-            if (q.completed) {
+          
+          // First priority: turn in any completed quest
+          const completed = active.filter(q => q.completed);
+          if (completed.length > 0) {
+            for (const q of completed) {
               const reward = this.questSystem.turnInQuest(q.def.id);
               if (reward) {
                 this.player.gold += reward.gold;
                 this.events.emit(Events.GOLD_CHANGE, { amount: reward.gold, newTotal: this.player.gold });
                 if (reward.itemId) this.addToInventory(reward.itemId, reward.itemQty ?? 1);
-                this.events.emit(Events.TOAST, { message: `Quest complete! +${reward.gold}g`, color: '#ffdd44' });
+                this.events.emit(Events.TOAST, { message: `✓ ${q.def.name} +${reward.gold}g`, color: '#ffdd44' });
               }
-            } else {
-              this.events.emit(Events.TOAST, { message: `${q.def.name}: ${q.progress}/${q.def.targetQty}`, color: '#aaccff' });
             }
-          } else if (available.length > 0) {
-            const quest = available[0];
-            this.questSystem.acceptQuest(quest.id);
+            break;
+          }
+          
+          // Second: show progress on active quests
+          const inProgress = active.filter(q => !q.completed);
+          if (inProgress.length > 0) {
+            const lines = inProgress.map(q => `${q.def.name}: ${q.progress}/${q.def.targetQty}`).join(' | ');
+            this.events.emit(Events.TOAST, { message: lines, color: '#aaccff' });
+            // Also accept a new quest if there's room
+            if (inProgress.length < 3 && available.length > 0) {
+              const quest = available[0];
+              this.questSystem.acceptQuest(quest.id);
+              this.events.emit(Events.TOAST, { message: `New quest: ${quest.name}`, color: '#88ff44' });
+            }
+            break;
+          }
+          
+          // Third: accept new quests (up to 3)
+          if (available.length > 0) {
+            const toAccept = available.slice(0, 3);
+            for (const quest of toAccept) {
+              this.questSystem.acceptQuest(quest.id);
+            }
+            const names = toAccept.map(q => q.name).join(', ');
+            this.events.emit(Events.TOAST, { message: `Accepted: ${names}`, color: '#88ff44' });
           } else {
             this.events.emit(Events.TOAST, { message: 'No quests available right now.', color: '#ffaa44' });
           }
@@ -1266,6 +1313,71 @@ export class PlayScene extends Phaser.Scene {
     this.addLabel(15, 23, 'Quest Board');
     this.addLabel(17, 22, 'Owen\'s Forge');
     this.addLabel(10, 23, 'Carpenter');
+  }
+
+  private buildCollisionMap() {
+    this.solidTiles.clear();
+    const mark = (x: number, y: number) => this.solidTiles.add(`${x},${y}`);
+    
+    // Water tiles
+    for (const tile of this.farmTiles) {
+      if (tile.type === TileType.WATER) mark(tile.x, tile.y);
+    }
+    
+    // House footprint (house drawn at tile 20,7 with 1.8x scale — covers roughly 4x3 tiles)
+    for (let x = 18; x <= 22; x++) {
+      for (let y = 5; y <= 8; y++) {
+        mark(x, y);
+      }
+    }
+    // House entry path stays open at (19-20, 9)
+    
+    // Trees — same positions as createWorldObjects
+    const treePositions = [
+      [2, 1], [5, 0], [8, 1], [12, 0], [15, 1], [33, 0], [36, 1], [38, 0],
+      [2, 28], [6, 29], [10, 28], [14, 29], [33, 28], [36, 29], [38, 28],
+      [0, 5], [1, 10], [0, 16], [1, 22],
+      [39, 5], [38, 12], [39, 18], [38, 24],
+      [5, 5], [7, 3], [34, 6], [36, 10],
+    ];
+    for (const [tx, ty] of treePositions) {
+      mark(tx, ty);
+    }
+    
+    // Fences — same logic as createWorldObjects
+    for (let fx = 10; fx <= 28; fx++) {
+      for (const fy of [10, 20]) {
+        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
+        mark(fx, fy);
+      }
+    }
+    for (let fy = 11; fy <= 19; fy++) {
+      for (const fx of [10, 28]) {
+        mark(fx, fy);
+      }
+    }
+    
+    // Map border (prevent walking off map)
+    for (let x = -1; x <= FARM_WIDTH; x++) {
+      mark(x, -1);
+      mark(x, FARM_HEIGHT);
+    }
+    for (let y = -1; y <= FARM_HEIGHT; y++) {
+      mark(-1, y);
+      mark(FARM_WIDTH, y);
+    }
+    
+    // Shop building (around 28,23 area)
+    for (let x = 27; x <= 30; x++) {
+      for (let y = 22; y <= 23; y++) {
+        if (x === 28 && y === 23) continue; // shop interactable stays accessible  
+        // Don't block — shop is just an NPC stand, not a building
+      }
+    }
+    
+    // Coop and Barn
+    for (let x = 27; x <= 29; x++) mark(x, 9);  // coop roof
+    for (let x = 31; x <= 33; x++) mark(x, 9);  // barn roof
   }
 
   private createInteractable(tileX: number, tileY: number, frameOrLabel: number | string, kind: InteractionKind) {
