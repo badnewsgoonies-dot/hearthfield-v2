@@ -8,6 +8,8 @@ export interface TouchInputState {
   dy: number;       // -1..1 vertical
   toolJust: boolean; // space equivalent (single-fire)
   interactJust: boolean; // E equivalent (single-fire)
+  inventoryJust: boolean; // I equivalent (single-fire)
+  pauseJust: boolean; // ESC equivalent (single-fire)
 }
 
 const DPAD_RADIUS = 52;
@@ -23,6 +25,9 @@ export class TouchControls {
   private joystickThumb: Phaser.GameObjects.Arc;
   private btnTool: Phaser.GameObjects.Container;
   private btnInteract: Phaser.GameObjects.Container;
+  private btnInventory: Phaser.GameObjects.Container;
+  private btnPause: Phaser.GameObjects.Container;
+  private allButtons: { container: Phaser.GameObjects.Container; key: keyof TouchInputState }[] = [];
 
   private joystickPointerId: number | null = null;
   private joystickOriginX = 0;
@@ -32,6 +37,8 @@ export class TouchControls {
     dx: 0, dy: 0,
     toolJust: false,
     interactJust: false,
+    inventoryJust: false,
+    pauseJust: false,
   };
 
   private isTouchDevice: boolean;
@@ -57,9 +64,18 @@ export class TouchControls {
     this.container.add([this.joystickBase, this.joystickThumb]);
 
     // --- Action buttons (bottom-right) ---
-    this.btnTool = this.makeButton(w - 70, h - 120, '⚔', 0x88cc44);
-    this.btnInteract = this.makeButton(w - 70, h - 60, 'E', 0x44aaff);
-    this.container.add([this.btnTool, this.btnInteract]);
+    this.btnTool = this.makeButton(w - 70, h - 130, '⚔', 0x88cc44);
+    this.btnInteract = this.makeButton(w - 70, h - 68, 'E', 0x44aaff);
+    this.btnInventory = this.makeButton(w - 44, 50, '▤', 0xcc8844);
+    this.btnPause = this.makeButton(44, 50, '⏸', 0x888888);
+    this.container.add([this.btnTool, this.btnInteract, this.btnInventory, this.btnPause]);
+
+    this.allButtons = [
+      { container: this.btnTool, key: 'toolJust' },
+      { container: this.btnInteract, key: 'interactJust' },
+      { container: this.btnInventory, key: 'inventoryJust' },
+      { container: this.btnPause, key: 'pauseJust' },
+    ];
 
     // Only show on touch devices
     this.container.setVisible(this.isTouchDevice);
@@ -84,8 +100,13 @@ export class TouchControls {
 
     // Joystick — use full-screen zone on left half
     scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      // Left half = joystick
-      if (p.x < scene.scale.width * 0.4 && this.joystickPointerId === null) {
+      // Check if hitting a button first — skip joystick if so
+      for (const btn of this.allButtons) {
+        const dist = Phaser.Math.Distance.Between(p.x, p.y, btn.container.x, btn.container.y);
+        if (dist < BTN_RADIUS + 14) return;
+      }
+      // Left half = joystick, but not too close to bottom (hotbar area)
+      if (p.x < scene.scale.width * 0.4 && p.y < scene.scale.height - 55 && this.joystickPointerId === null) {
         this.joystickPointerId = p.id;
         this.joystickOriginX = p.x;
         this.joystickOriginY = p.y;
@@ -136,34 +157,25 @@ export class TouchControls {
     scene.input.on('pointerup', releaseJoystick);
     scene.input.on('pointerupoutside', releaseJoystick);
 
-    // Action buttons — hit test on right side
+    // Action buttons — hit test all buttons
     scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (p.x < scene.scale.width * 0.5) return; // only right half
+      // Skip if this is the joystick pointer
+      if (p.id === this.joystickPointerId) return;
 
-      const toolBg = this.btnTool.first as Phaser.GameObjects.Arc;
-      const intBg = this.btnInteract.first as Phaser.GameObjects.Arc;
-
-      const toolDist = Phaser.Math.Distance.Between(
-        p.x, p.y,
-        this.btnTool.x, this.btnTool.y,
-      );
-      const intDist = Phaser.Math.Distance.Between(
-        p.x, p.y,
-        this.btnInteract.x, this.btnInteract.y,
-      );
-
-      if (toolDist < BTN_RADIUS + 12) {
-        this.state.toolJust = true;
-        toolBg.setAlpha(ALPHA_ACTIVE);
-        scene.time.delayedCall(120, () => {
-          toolBg.setAlpha(ALPHA_REST);
-        });
-      } else if (intDist < BTN_RADIUS + 12) {
-        this.state.interactJust = true;
-        intBg.setAlpha(ALPHA_ACTIVE);
-        scene.time.delayedCall(120, () => {
-          intBg.setAlpha(ALPHA_REST);
-        });
+      for (const btn of this.allButtons) {
+        const dist = Phaser.Math.Distance.Between(
+          p.x, p.y,
+          btn.container.x, btn.container.y,
+        );
+        if (dist < BTN_RADIUS + 14) {
+          (this.state as any)[btn.key] = true;
+          const bg = btn.container.first as Phaser.GameObjects.Arc;
+          bg.setAlpha(ALPHA_ACTIVE);
+          scene.time.delayedCall(120, () => {
+            bg.setAlpha(ALPHA_REST);
+          });
+          break; // only one button per tap
+        }
       }
     });
   }
@@ -172,6 +184,8 @@ export class TouchControls {
   consumeJustPressed(): void {
     this.state.toolJust = false;
     this.state.interactJust = false;
+    this.state.inventoryJust = false;
+    this.state.pauseJust = false;
   }
 
   /** Gamepad polling — call every frame */
@@ -212,7 +226,9 @@ export class TouchControls {
     this.joystickBase.setPosition(80, h - 100);
     this.joystickThumb.setPosition(80, h - 100);
     // Buttons
-    this.btnTool.setPosition(w - 70, h - 120);
-    this.btnInteract.setPosition(w - 70, h - 60);
+    this.btnTool.setPosition(w - 70, h - 130);
+    this.btnInteract.setPosition(w - 70, h - 68);
+    this.btnInventory.setPosition(w - 44, 50);
+    this.btnPause.setPosition(44, 50);
   }
 }

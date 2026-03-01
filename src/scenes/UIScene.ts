@@ -126,6 +126,11 @@ export class UIScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.touchControls.pollGamepad();
 
+    // Handle touch inventory/pause buttons
+    const ts = this.touchControls.state;
+    if (ts.inventoryJust) this.openInventory();
+    if (ts.pauseJust) this.togglePause();
+
     const slotSize = 40;
     const gap = 4;
     const totalW = HOTBAR_SIZE * (slotSize + gap) - gap;
@@ -174,6 +179,8 @@ export class UIScene extends Phaser.Scene {
       const x = startX + i * (slotSize + gap) + slotSize / 2;
       const bg = this.add.rectangle(x, 0, slotSize, slotSize, 0x222222, 0.85);
       bg.setStrokeStyle(1, 0x666666, 1);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => this.selectHotbarSlot(i));
       this.hotbarSlots.push(bg);
       this.hotbarContainer.add(bg);
 
