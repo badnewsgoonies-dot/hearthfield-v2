@@ -1,0 +1,17 @@
+{
+  "name": "hearthfield",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/game.ts --bundle --outfile=public/game.js --format=esm --platform=browser --sourcemap --target=es2020 --alias:phaser=./src/phaser-shim.ts",
+    "watch": "esbuild src/game.ts --bundle --outfile=public/game.js --format=esm --platform=browser --sourcemap --target=es2020 --alias:phaser=./src/phaser-shim.ts --watch",
+    "serve": "npx http-server public -p 8080"
+  },
+  "dependencies": {
+    "phaser": "^3.80.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}
