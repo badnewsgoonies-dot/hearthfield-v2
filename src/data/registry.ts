@@ -199,11 +199,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['coal', 'stone'],
     defaultMap: MapId.TOWN, portraitIndex: 0, spriteIndex: 0,
     dialoguePool: {
-      '0': ['Oh, hello. I don\'t think we\'ve met.', 'New around here?'],
-      '1': ['Nice to see you again!', 'How\'s the farm coming along?'],
-      '2': ['I always enjoy our chats.', 'Want to see my garden sometime?'],
-      '3': ['You\'re so sweet to visit me.', 'I made you something!'],
-      '4': ['I can\'t imagine life without you.', 'Every day with you is an adventure.'],
+      '0': ['Oh, hello. I don\'t think we\'ve met.', 'New around here?', 'If spring planting is going well, stop by with fresh vegetables.'],
+      '1': ['Nice to see you again!', 'How\'s the farm coming along?', 'Bring me a gift sometime and I\'ll share a kitchen trick.'],
+      '2': ['I always enjoy our chats.', 'Want to see my garden sometime?', 'A warm meal before mining helps, especially past floor 20.'],
+      '3': ['You\'re so sweet to visit me.', 'I made you something!', 'Try combining milk and pumpkin in fall for a comforting soup.'],
+      '4': ['I can\'t imagine life without you.', 'Every day with you is an adventure.', 'I wonder what dishes people cook beyond the mountains...'],
     }
   },
   {
@@ -214,11 +214,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['wild_berries', 'fiber'],
     defaultMap: MapId.MINE, portraitIndex: 1, spriteIndex: 1,
     dialoguePool: {
-      '0': ['Watch your step in the mines.', 'Hmph.'],
-      '1': ['You handle yourself well down there.', 'Need any ore?'],
-      '2': ['I respect your work ethic.', 'Here, found this while digging.'],
-      '3': ['You\'re tougher than you look.', 'I saved the best vein for you.'],
-      '4': ['You complete me... like a full ore deposit.', 'Mining with you is the best.'],
+      '0': ['Watch your step in the mines.', 'Hmph.', 'The mine gets dangerous past floor 20, so pack food.'],
+      '1': ['You handle yourself well down there.', 'Need any ore?', 'Copper veins are common early, but iron starts showing deeper.'],
+      '2': ['I respect your work ethic.', 'Here, found this while digging.', 'Spring rains make the ladders slick. Keep your boots steady.'],
+      '3': ['You\'re tougher than you look.', 'I saved the best vein for you.', 'Bring me a gift sometime and I might mark rich spots for you.'],
+      '4': ['You complete me... like a full ore deposit.', 'Mining with you is the best.', 'Sometimes I wonder what waits beneath the deepest stone.'],
     }
   },
   {
@@ -229,11 +229,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['iron_ore', 'coal'],
     defaultMap: MapId.BEACH, portraitIndex: 2, spriteIndex: 2,
     dialoguePool: {
-      '0': ['Oh! The waves are beautiful today.', 'Are you new here?'],
-      '1': ['It\'s nice having someone to talk to!', 'Do you like the beach?'],
-      '2': ['I painted something for you!', 'Let\'s watch the sunset!'],
-      '3': ['You make every day brighter.', 'I dream about you sometimes.'],
-      '4': ['I love you with all my heart.', 'Let\'s grow old by the sea.'],
+      '0': ['Oh! The waves are beautiful today.', 'Are you new here?', 'Spring planting going well? Wild flowers bloom all over the forest paths.'],
+      '1': ['It\'s nice having someone to talk to!', 'Do you like the beach?', 'Bring me a gift sometime; I love sweet things from nature.'],
+      '2': ['I painted something for you!', 'Let\'s watch the sunset!', 'Foraging in the morning usually finds the freshest berries and flowers.'],
+      '3': ['You make every day brighter.', 'I dream about you sometimes.', 'Each season has its own scent, and I wait for them all year.'],
+      '4': ['I love you with all my heart.', 'Let\'s grow old by the sea.', 'I wonder what kinds of flowers bloom beyond the mountains...'],
     }
   },
   {
@@ -244,11 +244,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['parsnip'],
     defaultMap: MapId.TOWN, portraitIndex: 3, spriteIndex: 3,
     dialoguePool: {
-      '0': ['Welcome to the blacksmith shop.', 'Need something upgraded?'],
-      '1': ['Bring me ore and I\'ll make you something nice.', 'Business is good!'],
-      '2': ['You\'re one of my best customers!', 'Here, take this.'],
-      '3': ['I consider you a true friend.', 'This one\'s on the house.'],
-      '4': ['You\'re like family to me.', 'Best friends forever!'],
+      '0': ['Welcome to the blacksmith shop.', 'Need something upgraded?', 'Low-grade ore bends. Good ore sings when it hits the anvil.'],
+      '1': ['Bring me ore and I\'ll make you something nice.', 'Business is good!', 'Bring me a gift sometime and I\'ll bump your work order up the queue.'],
+      '2': ['You\'re one of my best customers!', 'Here, take this.', 'If your pickaxe feels slow, an upgrade will save hours in the mine.'],
+      '3': ['I consider you a true friend.', 'This one\'s on the house.', 'Past floor 20, weak tools are a liability. Keep yours sharp.'],
+      '4': ['You\'re like family to me.', 'Best friends forever!', 'Sometimes I wonder what metal lies beyond the mountains.'],
     }
   },
   {
@@ -259,11 +259,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['gold_bar', 'diamond'],
     defaultMap: MapId.FOREST, portraitIndex: 4, spriteIndex: 4,
     dialoguePool: {
-      '0': ['The forest speaks to those who listen.', 'Hmm, you have potential.'],
-      '1': ['Nature rewards patience.', 'The spirits favor you.'],
-      '2': ['I sense great harmony in you.', 'Let me teach you something.'],
-      '3': ['You understand the old ways.', 'The forest protects its friends.'],
-      '4': ['You are a true guardian of nature.', 'I am honored to call you friend.'],
+      '0': ['The forest speaks to those who listen.', 'Hmm, you have potential.', 'Spring planting going well? The soil remembers kind hands.'],
+      '1': ['Nature rewards patience.', 'The spirits favor you.', 'Bring me a gift sometime, and I will answer one difficult question.'],
+      '2': ['I sense great harmony in you.', 'Let me teach you something.', 'Rare mushrooms appear where sun and shadow trade places.'],
+      '3': ['You understand the old ways.', 'The forest protects its friends.', 'Below floor 20, the mine keeps relics for the brave.'],
+      '4': ['You are a true guardian of nature.', 'I am honored to call you friend.', 'I wonder what ancient names echo beyond the mountains...'],
     }
   },
 

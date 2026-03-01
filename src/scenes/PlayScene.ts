@@ -23,6 +23,7 @@ import { MachineSystem, MachineState } from '../systems/machines';
 import { AchievementSystem, AchievementState } from '../systems/achievements';
 import { ForagingSystem, ForagingState } from '../systems/foraging';
 import { FestivalSystem } from '../systems/festivals';
+import { StorySystem, StoryFlags } from '../systems/story';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -71,6 +72,7 @@ export class PlayScene extends Phaser.Scene {
   machineSystem!: MachineSystem;
   achievementSystem!: AchievementSystem;
   foragingSystem!: ForagingSystem;
+  storySystem!: StorySystem;
   festivalSystem!: FestivalSystem;
   private isNewGame = false;
   private tutorialStep: number = 0;
@@ -171,6 +173,7 @@ export class PlayScene extends Phaser.Scene {
     if (!this.machineSystem) this.machineSystem = new MachineSystem(this);
     if (!this.achievementSystem) this.achievementSystem = new AchievementSystem(this);
     if (!this.foragingSystem) this.foragingSystem = new ForagingSystem();
+    if (!this.storySystem) this.storySystem = new StorySystem(this);
     if (!this.festivalSystem) this.festivalSystem = new FestivalSystem(this);
 
     const shouldRollInitialWeather = this.isNewGame;
@@ -769,7 +772,13 @@ export class PlayScene extends Phaser.Scene {
           }
           break;
         case Tool.FISHING_ROD: {
-          // Launch standalone FishingScene
+          // Check if facing or near water
+          const fishTarget = facingTile(this.player.x, this.player.y, this.player.direction);
+          const fishTile = this.getFarmTile(fishTarget.x, fishTarget.y);
+          if (!fishTile || fishTile.type !== TileType.WATER) {
+            this.events.emit(Events.TOAST, { message: 'Face a body of water to fish!', color: '#66aaff' });
+            break;
+          }
           const timeOfDay = this.calendar.timeOfDay < 0.25 ? 'morning' : this.calendar.timeOfDay < 0.5 ? 'afternoon' : this.calendar.timeOfDay < 0.75 ? 'evening' : 'night';
           this.scene.pause(Scenes.PLAY);
           this.scene.launch('FishingScene', {
@@ -1740,6 +1749,7 @@ export class PlayScene extends Phaser.Scene {
       currentWeather?: WeatherType;
       tutorialStep?: number;
       tutorialActive?: boolean;
+      storyFlags?: StoryFlags;
     } = {
       version: 1,
       player: { ...this.player },
@@ -1766,6 +1776,7 @@ export class PlayScene extends Phaser.Scene {
       achievementState: this.achievementSystem.getState(),
       foragingState: this.foragingSystem.getState(),
       festivalAttended: this.festivalSystem.getAttended(),
+      storyFlags: this.storySystem.getState().flags,
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     this.events.emit(Events.TOAST, { message: 'Game saved!', color: '#44aaff', duration: 1500 });
@@ -1779,6 +1790,7 @@ export class PlayScene extends Phaser.Scene {
         currentWeather?: WeatherType;
         tutorialStep?: number;
         tutorialActive?: boolean;
+        storyFlags?: StoryFlags;
       } = JSON.parse(raw);
       this.player = data.player;
       this.calendar = data.calendar;
@@ -1829,6 +1841,9 @@ export class PlayScene extends Phaser.Scene {
       }
       if (data.festivalAttended) {
         this.festivalSystem = new FestivalSystem(this, data.festivalAttended);
+      }
+      if (data.storyFlags) {
+        this.storySystem = new StorySystem(this, data.storyFlags);
       }
       return true;
     } catch {

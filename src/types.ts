@@ -292,6 +292,7 @@ export interface SaveData {
   achievementState?: any;
   foragingState?: any;
   festivalAttended?: string[];
+  storyFlags?: any;
 }
 
 // ════════════════════════════════════════════════════════════
