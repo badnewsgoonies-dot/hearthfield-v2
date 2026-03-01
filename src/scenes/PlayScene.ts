@@ -6,8 +6,8 @@ import {
   RelationshipState, MineState, AnimalState, HouseState, PlayStats,
   QuestState, SaveData, SAVE_KEY, START_GOLD, MAX_STAMINA,
   INVENTORY_SIZE, HOTBAR_SIZE, Season, Quality, DAY_LENGTH_MS,
-  gridToWorld, worldToGrid, facingTile, clamp, ySortDepth,
-  InteractionKind, InventorySlot
+  gridToWorld, worldToGrid, facingTile, clamp, ySortDepth, NPCRelation,
+  InteractionKind, InventorySlot, ItemCategory
 } from '../types';
 import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
 import { FishingMinigame } from '../systems/fishing';
@@ -164,6 +164,7 @@ export class PlayScene extends Phaser.Scene {
     if (!this.questSystem) this.questSystem = new QuestSystem(this);
     if (!this.animalSystem) this.animalSystem = new AnimalSystem(this);
     if (!this.romanceSystem) this.romanceSystem = new RomanceSystem(this);
+    this.romanceSystem.getState().relationships = this.relationships;
     if (!this.upgradeSystem) this.upgradeSystem = new UpgradeSystem(this);
     if (!this.machineSystem) this.machineSystem = new MachineSystem(this);
     if (!this.achievementSystem) this.achievementSystem = new AchievementSystem(this);
@@ -341,7 +342,14 @@ export class PlayScene extends Phaser.Scene {
 
     // Init relationships
     for (const npc of NPCS) {
-      this.relationships[npc.id] = { hearts: 0, maxHearts: 8, relation: 0, talkedToday: false, giftedToday: false, giftsThisWeek: 0 };
+      this.relationships[npc.id] = {
+        hearts: 0,
+        maxHearts: 8,
+        talkedToday: false,
+        giftedToday: false,
+        giftsThisWeek: 0,
+        relation: NPCRelation.STRANGER
+      };
     }
 
     // Init tool levels
@@ -601,6 +609,14 @@ export class PlayScene extends Phaser.Scene {
     );
     this.renderForageables();
     this.festivalSystem.onDayStart(this.calendar.day, this.calendar.season as any);
+    const festival = (this.festivalSystem as any).getTodaysFestival?.(this.calendar.season, this.calendar.day);
+    if (festival) {
+      this.events.emit(Events.TOAST, {
+        message: `🎉 Today: ${festival.name}! Visit the town square.`,
+        color: '#ffaa44',
+        duration: 5000
+      });
+    }
     this.upgradeSystem.checkPendingUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
     const houseTierUp = this.upgradeSystem.checkHouseUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
     if (houseTierUp) {
@@ -738,6 +754,32 @@ export class PlayScene extends Phaser.Scene {
             season: this.calendar.season as any,
           });
           break;
+        }
+      }
+
+      const slotIndex = this.player.selectedSlot;
+      const slot = this.player.inventory[slotIndex];
+      const itemDef = slot ? ITEMS.find(item => item.id === slot.itemId) : undefined;
+      if (slot && itemDef && (itemDef.category === ItemCategory.MACHINE || String(itemDef.category).toUpperCase() === 'MACHINE')) {
+        const machineType = slot.itemId as MachineState['placed'][number]['type'];
+        const placedMachine = this.machineSystem.placeMachine?.(machineType, data.tileX, data.tileY) ?? null;
+        if (placedMachine) {
+          this.removeFromSlot(slotIndex, 1);
+          this.events.emit(Events.TOAST, { message: `Placed ${itemDef.name}!`, color: '#44ffaa' });
+
+          const machinePos = gridToWorld(data.tileX, data.tileY);
+          const machineSprite = this.add.sprite(machinePos.x, machinePos.y, 'items', itemDef.spriteIndex ?? 0);
+          machineSprite.setScale(SCALE);
+          machineSprite.setDepth(ySortDepth(machinePos.y));
+          machineSprite.setData('interaction', {
+            kind: InteractionKind.MACHINE,
+            targetId: placedMachine.id,
+            x: data.tileX,
+            y: data.tileY
+          });
+          this.objectLayer.add(machineSprite);
+        } else {
+          this.events.emit(Events.TOAST, { message: 'Cannot place machine here.', color: '#ff4444' });
         }
       }
     });
@@ -934,9 +976,19 @@ export class PlayScene extends Phaser.Scene {
           break;
         }
 
-        case InteractionKind.CHEST:
-          this.events.emit(Events.TOAST, { message: 'Chest storage coming soon!', color: '#aaccff' });
+        case InteractionKind.CHEST: {
+          // Simple chest: store current held item
+          const slotIndex = (this.player as any).hotbarIndex ?? this.player.selectedSlot;
+          const slot = this.player.inventory[slotIndex];
+          if (slot && slot.qty > 0) {
+            this.events.emit(Events.TOAST, { message: `Stored ${slot.qty}x ${slot.itemId} in chest.`, color: '#aaddff' });
+            this.player.inventory[slotIndex] = null;
+            this.events.emit(Events.INVENTORY_CHANGE, { inventory: this.player.inventory });
+          } else {
+            this.events.emit(Events.TOAST, { message: 'Chest is empty. Hold an item to store it.', color: '#aaddff' });
+          }
           break;
+        }
 
         case InteractionKind.FORAGEABLE: {
           let forageId = data.targetId;
@@ -973,9 +1025,45 @@ export class PlayScene extends Phaser.Scene {
           break;
         }
 
-        case InteractionKind.ANIMAL:
-          this.events.emit(Events.TOAST, { message: 'Pet your animals from the coop/barn menu.', color: '#ff88cc' });
+        case InteractionKind.ANIMAL: {
+          // Show animal menu — simplified: auto-collect products + pet/feed all
+          const animals = this.animalSystem.getState().animals;
+          if (animals.length === 0) {
+            // No animals — offer to buy
+            if (this.player.gold >= 800) {
+              const purchase = this.animalSystem.purchaseAnimal('chicken', 'Hen', this.player.gold);
+              if (purchase) {
+                this.player.gold -= purchase.cost;
+                this.events.emit(Events.TOAST, { message: `Bought a chicken! (${purchase.cost}g)`, color: '#ffdd44' });
+                this.events.emit(Events.GOLD_CHANGE, { amount: -purchase.cost, newTotal: this.player.gold });
+              } else {
+                this.events.emit(Events.TOAST, { message: 'Unable to buy a chicken right now.', color: '#ff8844' });
+              }
+            } else {
+              this.events.emit(Events.TOAST, { message: 'Buy a chicken: 800g (not enough gold)', color: '#ff8844' });
+            }
+            break;
+          }
+
+          // Feed + pet + collect from all animals
+          let collected = 0;
+          for (const animal of animals) {
+            this.animalSystem.feedAnimal(animal.id);
+            this.animalSystem.petAnimal(animal.id);
+            const product = this.animalSystem.collectProduct(animal.id);
+            if (product) {
+              const added = this.addToInventory(product.itemId, 1, product.quality);
+              if (added) collected++;
+            }
+          }
+
+          if (collected > 0) {
+            this.events.emit(Events.TOAST, { message: `Collected ${collected} product(s)!`, color: '#88ff44' });
+          } else {
+            this.events.emit(Events.TOAST, { message: `Petted ${animals.length} animal(s). No products ready.`, color: '#aaddff' });
+          }
           break;
+        }
       }
     });
 
@@ -1166,6 +1254,8 @@ export class PlayScene extends Phaser.Scene {
     this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
     this.createInteractable(17, 22, 7, InteractionKind.BLACKSMITH);
     this.createInteractable(10, 23, 7, InteractionKind.CARPENTER);
+    this.createInteractable(28, 10, 'Coop', InteractionKind.ANIMAL);
+    this.createInteractable(32, 10, 'Barn', InteractionKind.ANIMAL);
   
     this.addLabel(27, 12, 'Shipping Bin');
     this.addLabel(12, 16, 'Crafting Bench');
@@ -1555,7 +1645,11 @@ export class PlayScene extends Phaser.Scene {
   }
 
   saveGame() {
-    const data: SaveData = {
+    const data: SaveData & {
+      currentWeather?: WeatherType;
+      tutorialStep?: number;
+      tutorialActive?: boolean;
+    } = {
       version: 1,
       player: { ...this.player },
       calendar: { ...this.calendar },
@@ -1571,6 +1665,9 @@ export class PlayScene extends Phaser.Scene {
       unlockedRecipes: this.unlockedRecipes,
       chestContents: {},
       toolLevels: this.toolLevels,
+      currentWeather: this.currentWeather,
+      tutorialStep: this.tutorialStep,
+      tutorialActive: this.tutorialActive,
       questSystemState: this.questSystem.getState(),
       romanceState: this.romanceSystem.getState(),
       upgradeState: this.upgradeSystem.getState(),
@@ -1587,7 +1684,11 @@ export class PlayScene extends Phaser.Scene {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) { this.initNewGame(); return false; }
     try {
-      const data: SaveData = JSON.parse(raw);
+      const data: SaveData & {
+        currentWeather?: WeatherType;
+        tutorialStep?: number;
+        tutorialActive?: boolean;
+      } = JSON.parse(raw);
       this.player = data.player;
       this.calendar = data.calendar;
       this.farmTiles = data.farmTiles;
@@ -1600,6 +1701,9 @@ export class PlayScene extends Phaser.Scene {
       this.stats = data.stats;
       this.unlockedRecipes = data.unlockedRecipes;
       this.toolLevels = data.toolLevels;
+      if (data.currentWeather) this.currentWeather = data.currentWeather;
+      if (data.tutorialStep !== undefined) this.tutorialStep = data.tutorialStep;
+      if (data.tutorialActive !== undefined) this.tutorialActive = data.tutorialActive;
       // Restore new system states from save
       if (data.questSystemState) {
         this.questSystem = new QuestSystem(this, data.questSystemState);
