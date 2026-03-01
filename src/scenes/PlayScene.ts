@@ -13,7 +13,13 @@ import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
 import { FishingMinigame } from '../systems/fishing';
 import { MiningSystem } from '../systems/mining';
 import { ShopSystem } from '../systems/shop';
-import { TutorialSystem } from '../systems/tutorial';
+
+interface TutorialAdvancePayload {
+  active: boolean;
+  step: number;
+  text?: string;
+  targetTile?: { x: number; y: number };
+}
 
 export class PlayScene extends Phaser.Scene {
   // Core state
@@ -41,8 +47,13 @@ export class PlayScene extends Phaser.Scene {
   fishingMinigame!: FishingMinigame;
   miningSystem!: MiningSystem;
   shopSystem!: ShopSystem;
-  tutorialSystem?: TutorialSystem;
   private isNewGame = false;
+  private tutorialStep: number = 0;
+  private tutorialActive: boolean = true;
+  private tutorialText?: Phaser.GameObjects.Text;
+  private tutorialArrow?: Phaser.GameObjects.Text;
+  private tutorialStartX = 0;
+  private tutorialStartY = 0;
 
   // Day timer
   dayTimer = 0;
@@ -73,6 +84,8 @@ export class PlayScene extends Phaser.Scene {
     this.playerSprite.setScale(1);
     this.playerSprite.setDepth(ySortDepth(this.player.y));
     this.playerSprite.play('idle_down');
+    this.tutorialStartX = this.player.x;
+    this.tutorialStartY = this.player.y;
 
     // Camera follows player
     this.cameras.main.startFollow(this.playerSprite, true, 0.1, 0.1);
@@ -126,10 +139,7 @@ export class PlayScene extends Phaser.Scene {
     // Fade in from intro
     this.cameras.main.fadeIn(1500, 0, 0, 0);
 
-    // Start tutorial for new games
-    if (this.isNewGame) {
-      this.tutorialSystem = new TutorialSystem(this);
-    }
+    if (this.isNewGame) this.updateTutorial();
   }
 
   update(time: number, delta: number) {
@@ -140,6 +150,12 @@ export class PlayScene extends Phaser.Scene {
     this.updateDayTimer(delta);
     this.updateCropSprites();
     this.playerSprite.setDepth(ySortDepth(this.player.y));
+
+    if (this.tutorialActive && this.tutorialStep === 0) {
+      const dx = this.player.x - this.tutorialStartX;
+      const dy = this.player.y - this.tutorialStartY;
+      if (Math.sqrt(dx * dx + dy * dy) >= 200) this.advanceTutorial(1);
+    }
   }
 
   // ── Initialization ──
@@ -159,59 +175,56 @@ export class PlayScene extends Phaser.Scene {
       currentMap: MapId.FARM,
     };
 
-    // Give starter items — tools first, then seeds
+    // Give starter loadout
     this.player.inventory[0] = { itemId: 'tool_hoe', qty: 1, quality: Quality.NORMAL };
-    this.player.inventory[1] = { itemId: 'tool_watering_can', qty: 1, quality: Quality.NORMAL };
-    this.player.inventory[2] = { itemId: 'parsnip_seeds', qty: 15, quality: Quality.NORMAL };
+    this.player.inventory[1] = { itemId: 'parsnip_seeds', qty: 15, quality: Quality.NORMAL };
+    this.player.inventory[2] = { itemId: 'tool_watering_can', qty: 1, quality: Quality.NORMAL };
     this.player.inventory[3] = { itemId: 'potato_seeds', qty: 5, quality: Quality.NORMAL };
 
     this.calendar = { day: 1, season: Season.SPRING, year: 1, timeOfDay: 0, isPaused: false };
 
-    // Init farm tiles
+    // Designed farm layout for first-play readability
     this.farmTiles = [];
     for (let y = 0; y < FARM_HEIGHT; y++) {
       for (let x = 0; x < FARM_WIDTH; x++) {
         let type = TileType.GRASS;
 
-        // ── Water pond (northeast) ──
-        if (x >= 30 && x <= 34 && y >= 3 && y <= 6) type = TileType.WATER;
+        if (y <= 2 && x % 2 === 0) type = TileType.WOOD;
+        if (y === 4 && x >= 20 && x <= 35) type = TileType.PATH;
+        if (x >= 34 && x <= 36 && y >= 3 && y <= 5) type = TileType.STONE;
 
-        // ── Main path: vertical from house down to farm ──
-        if (x >= 19 && x <= 20 && y >= 8 && y <= 20) type = TileType.PATH;
-        // Horizontal path east to shipping bin
-        if (y >= 14 && y <= 15 && x >= 20 && x <= 26) type = TileType.PATH;
-        // Path south toward town exit
-        if (x >= 19 && x <= 20 && y >= 20 && y <= 29) type = TileType.PATH;
+        if (x >= 17 && x <= 24 && y >= 6 && y <= 9) type = TileType.DIRT;
+        if (x >= 21 && x <= 22 && y >= 8 && y <= 16) type = TileType.PATH;
 
-        // ── Starter farming plot (clear dirt, south of house) ──
-        if (x >= 14 && x <= 18 && y >= 16 && y <= 22) type = TileType.DIRT;
-
-        // ── Sand near water ──
-        if (type === TileType.GRASS) {
-          const dx = Math.min(Math.abs(x - 30), Math.abs(x - 34));
-          const dy = Math.min(Math.abs(y - 3), Math.abs(y - 6));
-          if (x >= 28 && x <= 36 && y >= 1 && y <= 8 && (dx <= 1 || dy <= 1)) {
-            if (type !== TileType.WATER) type = TileType.SAND;
-          }
+        if (x >= 10 && x <= 28 && y >= 10 && y <= 14) type = TileType.DIRT;
+        if (y >= 11 && y <= 13 && (
+          (x >= 11 && x <= 13) ||
+          (x >= 15 && x <= 17) ||
+          (x >= 19 && x <= 21) ||
+          (x >= 23 && x <= 25)
+        )) {
+          type = TileType.TILLED;
         }
 
-        // ── Trees along edges (leave playable area clear) ──
-        if (type === TileType.GRASS) {
-          // Top tree line
-          if (y <= 1 && Math.random() < 0.4) type = TileType.WOOD;
-          // Left tree line
-          if (x <= 2 && Math.random() < 0.3) type = TileType.WOOD;
-          // Right tree line
-          if (x >= 37 && Math.random() < 0.3) type = TileType.WOOD;
-          // Bottom tree line
-          if (y >= 28 && Math.random() < 0.3) type = TileType.WOOD;
+        if ((x >= 10 && x <= 28 && (y === 9 || y === 15)) || (y >= 9 && y <= 15 && (x === 10 || x === 28))) {
+          type = TileType.WOOD;
         }
+        if ((x === 21 || x === 22) && (y === 9 || y === 15)) type = TileType.PATH;
 
-        // ── Scattered rocks/stumps (sparse in play area) ──
-        if (type === TileType.GRASS && y > 3 && y < 27 && x > 3 && x < 36) {
-          if (Math.random() < 0.015) type = TileType.STONE;
-          if (Math.random() < 0.015) type = TileType.WOOD;
-        }
+        if (y === 16 && x >= 4 && x <= 35) type = TileType.STONE;
+        if (x === 21 && y >= 16 && y <= 22) type = TileType.PATH;
+        if (x >= 28 && x <= 30 && y >= 15 && y <= 17) type = TileType.PATH;
+
+        if (y >= 19 && y <= 22 && x >= 8 && x <= 32) type = TileType.GRASS;
+        if (y === 20 && x >= 10 && x <= 30) type = TileType.PATH;
+
+        if (x >= 8 && x <= 12 && y >= 23 && y <= 26) type = TileType.WATER;
+        if (type !== TileType.WATER && x >= 7 && x <= 13 && y >= 22 && y <= 27) type = TileType.SAND;
+        if ((x === 10 || x === 11) && y >= 20 && y <= 23) type = TileType.PATH;
+
+        if (y >= 26 && y <= 28 && (x % 3 === 0 || x === 0 || x === FARM_WIDTH - 1)) type = TileType.WOOD;
+        if (y >= 26 && x >= 33) type = TileType.SAND;
+        if (y === 29 && x % 2 === 0) type = TileType.WOOD;
 
         this.farmTiles.push({ x, y, type, watered: false });
       }
@@ -280,6 +293,13 @@ export class PlayScene extends Phaser.Scene {
 
   private handleToolInput() {
     if (Phaser.Input.Keyboard.JustDown(this.keys.space)) {
+      const slot = this.player.inventory[this.player.selectedSlot];
+      const itemDef = slot ? ITEMS.find((item) => item.id === slot.itemId) : undefined;
+      if (slot && itemDef && (itemDef.category === 'seed' || itemDef.edible)) {
+        this.events.emit(Events.ITEM_USE, { itemId: slot.itemId, slotIndex: this.player.selectedSlot });
+        return;
+      }
+
       if (this.player.stamina <= 0) {
         this.events.emit(Events.TOAST, { message: 'Too tired!', color: '#ff4444' });
         return;
@@ -583,6 +603,7 @@ export class PlayScene extends Phaser.Scene {
               this.events.emit(Events.TOAST, { message: `Added ${itemDef.name} to shipping bin`, color: '#ffdd44' });
             }
           }
+          if (this.tutorialActive && this.tutorialStep === 4) this.advanceTutorial(5);
           break;
         }
         case InteractionKind.CRAFTING_BENCH:
@@ -596,6 +617,7 @@ export class PlayScene extends Phaser.Scene {
           }
           break;
         case InteractionKind.BED:
+          if (this.tutorialActive && this.tutorialStep === 5) this.advanceTutorial(6);
           this.endDay();
           break;
         case InteractionKind.NPC: {
@@ -737,26 +759,61 @@ export class PlayScene extends Phaser.Scene {
   private createWorldObjects() {
     this.objectLayer = this.add.container(0, 0);
 
-    // House (decorative, near where player spawns — frame 7)
-    const housePos = gridToWorld(19, 7);
-    const house = this.add.sprite(housePos.x + SCALED_TILE / 2, housePos.y, 'objects', 7);
-    house.setScale(SCALE * 2);
-    house.setDepth(ySortDepth(housePos.y));
+    const housePos = gridToWorld(20, 7);
+    const hasHouseTexture = this.textures.exists('house');
+    const house = hasHouseTexture
+      ? this.add.sprite(housePos.x, housePos.y - 32, 'house')
+      : this.add.sprite(housePos.x, housePos.y - 12, 'objects', 7);
+    house.setScale(hasHouseTexture ? SCALE * 0.8 : SCALE * 2);
+    house.setDepth(ySortDepth(housePos.y) - 1);
+    this.objectLayer.add(house);
 
-    // Bed (near house)
-    this.createInteractable(20, 9, 2, InteractionKind.BED);
-    // Kitchen (near house)
-    this.createInteractable(18, 9, 3, InteractionKind.KITCHEN);
-    // Crafting bench (west of house)
-    this.createInteractable(16, 11, 1, InteractionKind.CRAFTING_BENCH);
-    // Shipping bin (east of path, near farming area)
-    this.createInteractable(26, 14, 0, InteractionKind.SHIPPING_BIN);
-    // Shop sign (east side)
-    this.createInteractable(28, 10, 4, InteractionKind.SHOP);
-    // Mine entrance (northeast)
-    this.createInteractable(35, 5, 5, InteractionKind.DOOR);
-    // Quest board (south along path)
-    this.createInteractable(22, 20, 6, InteractionKind.QUEST_BOARD);
+    for (let tx = 0; tx < FARM_WIDTH; tx += 3) {
+      const topPos = gridToWorld(tx, 1);
+      const botPos = gridToWorld(tx, 28);
+      const topTree = this.add.sprite(topPos.x, topPos.y, 'terrain', TileType.WOOD);
+      const botTree = this.add.sprite(botPos.x, botPos.y, 'terrain', TileType.WOOD);
+      topTree.setScale(SCALE).setDepth(ySortDepth(topPos.y));
+      botTree.setScale(SCALE).setDepth(ySortDepth(botPos.y));
+      this.objectLayer.add(topTree);
+      this.objectLayer.add(botTree);
+    }
+
+    for (let fx = 10; fx <= 28; fx += 1) {
+      for (const fy of [9, 15]) {
+        if ((fx === 21 || fx === 22) && fy === 15) continue;
+        const p = gridToWorld(fx, fy);
+        const fence = this.add.sprite(p.x, p.y, 'terrain', TileType.WOOD);
+        fence.setScale(SCALE);
+        fence.setDepth(ySortDepth(p.y));
+        this.objectLayer.add(fence);
+      }
+    }
+    for (let fy = 10; fy <= 14; fy += 1) {
+      for (const fx of [10, 28]) {
+        const p = gridToWorld(fx, fy);
+        const fence = this.add.sprite(p.x, p.y, 'terrain', TileType.WOOD);
+        fence.setScale(SCALE);
+        fence.setDepth(ySortDepth(p.y));
+        this.objectLayer.add(fence);
+      }
+    }
+
+    this.createInteractable(20, 8, 2, InteractionKind.BED);
+    this.createInteractable(19, 8, 3, InteractionKind.KITCHEN);
+    this.createInteractable(16, 9, 1, InteractionKind.CRAFTING_BENCH);
+    this.createInteractable(25, 8, 0, InteractionKind.SHIPPING_BIN);
+    this.createInteractable(30, 16, 4, InteractionKind.SHOP);
+    this.createInteractable(35, 4, 5, InteractionKind.DOOR);
+    this.createInteractable(28, 16, 6, InteractionKind.QUEST_BOARD);
+
+    this.addLabel(25, 8, 'Shipping Bin');
+    this.addLabel(16, 9, 'Crafting Bench');
+    this.addLabel(20, 8, 'Bed');
+    this.addLabel(19, 8, 'Kitchen');
+    this.addLabel(30, 16, 'Shop');
+    this.addLabel(35, 4, 'Mine');
+    this.addLabel(28, 16, 'Quest Board');
   }
 
   private createInteractable(tileX: number, tileY: number, frame: number, kind: InteractionKind) {
@@ -769,16 +826,127 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private spawnNPCs() {
+    const npcPositions: Record<string, { x: number; y: number }> = {
+      elena: { x: 30, y: 17 },
+      owen: { x: 28, y: 17 },
+      lily: { x: 10, y: 24 },
+      sage: { x: 8, y: 20 },
+      marcus: { x: 35, y: 5 },
+    };
+
     for (const npc of NPCS) {
-      // Place NPCs at fixed positions on the farm for now
-      const x = 15 + NPCS.indexOf(npc) * 3;
-      const y = 20;
+      const fallbackX = 12 + (NPCS.indexOf(npc) % 5) * 4;
+      const fallbackY = 20 + Math.floor(NPCS.indexOf(npc) / 5) * 2;
+      const posDef = npcPositions[npc.id] ?? { x: fallbackX, y: fallbackY };
+      const x = posDef.x;
+      const y = posDef.y;
       const pos = gridToWorld(x, y);
       const spr = this.add.sprite(pos.x, pos.y, 'npcs', npc.spriteIndex);
       spr.setScale(SCALE);
       spr.setDepth(ySortDepth(pos.y));
       spr.setData('interaction', { kind: InteractionKind.NPC, targetId: npc.id, x, y });
       this.npcSprites.set(npc.id, spr);
+    }
+  }
+
+  private addLabel(x: number, y: number, text: string) {
+    const pos = gridToWorld(x, y);
+    const label = this.add.text(pos.x, pos.y - SCALED_TILE * 0.8, text, {
+      fontSize: '10px',
+      color: '#ffffff',
+      fontFamily: 'monospace',
+      backgroundColor: '#00000088',
+      padding: { x: 3, y: 2 }
+    }).setOrigin(0.5).setDepth(1000);
+    this.objectLayer.add(label);
+  }
+
+  private updateTutorial() {
+    this.tutorialActive = true;
+    this.tutorialStep = 0;
+    this.tutorialText = undefined;
+    this.tutorialArrow = undefined;
+
+    this.events.on(Events.SOIL_TILLED, () => {
+      if (this.tutorialActive && this.tutorialStep === 1) this.advanceTutorial(2);
+    });
+    this.events.on(Events.CROP_PLANTED, () => {
+      if (this.tutorialActive && this.tutorialStep === 2) this.advanceTutorial(3);
+    });
+    this.events.on(Events.CROP_WATERED, () => {
+      if (this.tutorialActive && this.tutorialStep === 3) this.advanceTutorial(4);
+    });
+
+    this.time.delayedCall(0, () => this.advanceTutorial(0));
+  }
+
+  private advanceTutorial(step: number) {
+    this.tutorialStep = step;
+
+    const emitState = (payload: TutorialAdvancePayload) => {
+      this.events.emit('tutorial:advance', payload);
+    };
+
+    switch (step) {
+      case 0:
+        emitState({
+          active: true,
+          step,
+          text: 'Welcome to your farm! Use WASD to walk around.',
+          targetTile: { x: 16, y: 12 }
+        });
+        break;
+      case 1:
+        emitState({
+          active: true,
+          step,
+          text: 'Press 1-0 to select tools. Your Hoe is selected - face the dark soil and press SPACE to till it.',
+          targetTile: { x: 12, y: 12 }
+        });
+        break;
+      case 2:
+        emitState({
+          active: true,
+          step,
+          text: 'Great! Now select your Parsnip Seeds (slot 2) and press SPACE to plant.',
+          targetTile: { x: 15, y: 12 }
+        });
+        break;
+      case 3:
+        emitState({
+          active: true,
+          step,
+          text: 'Now switch to your Watering Can and press SPACE to water.',
+          targetTile: { x: 15, y: 12 }
+        });
+        break;
+      case 4:
+        emitState({
+          active: true,
+          step,
+          text: 'Perfect! Your crop will grow overnight. Walk to the shipping bin (the brown box ->) and press E to interact.',
+          targetTile: { x: 25, y: 8 }
+        });
+        break;
+      case 5:
+        emitState({
+          active: true,
+          step,
+          text: 'You can ship items here for gold. Walk to your bed and press E to sleep.',
+          targetTile: { x: 20, y: 8 }
+        });
+        break;
+      case 6:
+        emitState({
+          active: true,
+          step,
+          text: 'Tutorial complete! Explore the farm, talk to villagers, and make Hearthfield flourish!'
+        });
+        this.time.delayedCall(3500, () => this.advanceTutorial(7));
+        break;
+      default:
+        this.tutorialActive = false;
+        emitState({ active: false, step: 7 });
     }
   }
 

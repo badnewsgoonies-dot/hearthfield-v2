@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   Events,
   HOTBAR_SIZE,
+  gridToWorld,
   InteractionKind,
   Quality,
   Scenes,
@@ -41,6 +42,13 @@ interface AchievementData {
   name: string;
 }
 
+interface TutorialAdvanceData {
+  active: boolean;
+  step: number;
+  text?: string;
+  targetTile?: { x: number; y: number };
+}
+
 export class UIScene extends Phaser.Scene {
   playScene!: PlayScene;
 
@@ -58,6 +66,11 @@ export class UIScene extends Phaser.Scene {
 
   private toastText!: Phaser.GameObjects.Text;
   private toastTimer = 0;
+  private tutorialBox!: Phaser.GameObjects.Rectangle;
+  private tutorialText!: Phaser.GameObjects.Text;
+  private tutorialArrow!: Phaser.GameObjects.Text;
+  private tutorialTargetTile?: { x: number; y: number };
+  private tutorialVisible = false;
 
   private craftingPanel!: Phaser.GameObjects.Container;
   private craftingTitle!: Phaser.GameObjects.Text;
@@ -90,6 +103,7 @@ export class UIScene extends Phaser.Scene {
     this.createHotbar();
     this.createHud();
     this.createToast();
+    this.createTutorialOverlay();
     this.createCraftingPanel();
     this.setupInput();
     this.wirePlayEvents();
@@ -128,6 +142,15 @@ export class UIScene extends Phaser.Scene {
       } else if (this.toastTimer < 350) {
         this.toastText.setAlpha(this.toastTimer / 350);
       }
+    }
+
+    if (this.tutorialVisible && this.tutorialTargetTile) {
+      const world = gridToWorld(this.tutorialTargetTile.x, this.tutorialTargetTile.y);
+      const cam = this.playScene.cameras.main;
+      const x = world.x - cam.worldView.x;
+      const y = world.y - cam.worldView.y - 40;
+      this.tutorialArrow.setPosition(x, y + Math.sin(this.time.now * 0.008) * 4);
+      this.tutorialArrow.setVisible(x >= -30 && x <= this.cameras.main.width + 30 && y >= -50 && y <= this.cameras.main.height + 30);
     }
   }
 
@@ -199,6 +222,27 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false)
       .setDepth(1000);
+  }
+
+  private createTutorialOverlay(): void {
+    const w = this.cameras.main.width;
+
+    this.tutorialBox = this.add.rectangle(w / 2, 60, 760, 52, 0x000000, 0.7).setDepth(980).setVisible(false);
+    this.tutorialBox.setStrokeStyle(2, 0xffffff, 0.18);
+
+    this.tutorialText = this.add.text(w / 2, 60, '', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 730 },
+    }).setOrigin(0.5).setDepth(981).setVisible(false);
+
+    this.tutorialArrow = this.add.text(0, 0, '▼', {
+      fontSize: '22px',
+      color: '#fff3a5',
+      fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(981).setVisible(false);
   }
 
   private createCraftingPanel(): void {
@@ -286,6 +330,15 @@ export class UIScene extends Phaser.Scene {
     ps.events.on(Events.ACHIEVEMENT, (data: AchievementData) => {
       const label = data.name || data.achievementId;
       this.showToast(`Achievement Unlocked: ${label}`, 2200, '#ffdd55');
+    });
+
+    ps.events.on('tutorial:advance', (data: TutorialAdvanceData) => {
+      this.tutorialVisible = data.active;
+      this.tutorialTargetTile = data.targetTile;
+      this.tutorialBox.setVisible(data.active);
+      this.tutorialText.setVisible(data.active);
+      this.tutorialArrow.setVisible(data.active && Boolean(data.targetTile));
+      this.tutorialText.setText(data.text ?? '');
     });
   }
 
