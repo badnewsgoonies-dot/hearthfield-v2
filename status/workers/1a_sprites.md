@@ -1,15 +1,31 @@
-# Worker 1A - BootScene Sprite Expansion
+# Worker 1A Report: Sprites + Registry Fix
 
-## Completed
-- Verified highest `spriteIndex` in `src/data/registry.ts` is `108`.
-- Updated `src/scenes/BootScene.ts` `genItems` spritesheet generation from `8x8` to `14x8` (`112` frames).
-- Updated frame registration loop from `64` frames to all generated frames (`112`).
-- Preserved tile size, procedural icon style, and base color generation logic.
-- Added explicit color ranges for:
-  - `70-76` animal products (warm browns/creams)
-  - `90-104` forage items (greens/earth tones)
-  - `105-108` special items (distinct colors)
+## New spritesheet frame count
+- `items` spritesheet now uses `16 x 8` frames.
+- Total frames: `128`.
 
-## Validation
-- Ran: `npx tsc --noEmit`
-- Result: passed (exit code `0`)
+## spriteIndex reassignments made
+- `omelet`: `74 -> 64`
+- `pumpkin_soup`: `77 -> 65`
+- `blueberry_tart`: `78 -> 66`
+- `corn_chowder`: `79 -> 67`
+- `cheese_press`: `58 -> 68`
+- `mayo_machine`: `59 -> 69`
+- `quality_sprinkler`: `60 -> 77`
+
+Additional update required by task:
+- `wool`: `80 -> 74`
+
+## Items removed
+- No removals were necessary in the current file state.
+- `honey`, `bouquet`, and `pendant` duplicate entries at sprite indices `105`, `106`, `107` were already absent.
+
+## Items added
+- `wool` item fields were updated to include requested fields and index:
+  - `buyPrice: 0`
+  - `stackable: true`
+  - `spriteIndex: 74`
+
+## tsc result
+- Command: `npx tsc --noEmit`
+- Result: `PASS (0 errors)`

@@ -1366,6 +1366,41 @@ export class PlayScene extends Phaser.Scene {
       this.stats = data.stats;
       this.unlockedRecipes = data.unlockedRecipes;
       this.toolLevels = data.toolLevels;
+      // Restore new system states from save
+      if (data.questSystemState) {
+        this.questSystem = new QuestSystem(this, data.questSystemState);
+      }
+      if (data.romanceState) {
+        this.romanceSystem = new RomanceSystem(this, data.romanceState);
+      }
+      if (data.upgradeState) {
+        this.upgradeSystem = new UpgradeSystem(this, data.upgradeState);
+      }
+      if (data.machineState) {
+        this.machineSystem = new MachineSystem(this, data.machineState);
+      }
+      if (data.achievementState || Array.isArray(data.achievements)) {
+        const achievementState: AchievementState = data.achievementState ? {
+          ...data.achievementState,
+          unlocked: Array.isArray(data.achievements) ? data.achievements : data.achievementState.unlocked,
+        } : {
+          unlocked: data.achievements,
+          shippedItems: [],
+          cookedRecipes: [],
+          caughtFish: [],
+          grownCrops: [],
+          totalGoldEarned: 0,
+          questsCompleted: 0,
+          giftedNpcs: [],
+        };
+        this.achievementSystem = new AchievementSystem(this, achievementState);
+      }
+      if (data.foragingState) {
+        this.foragingSystem = new ForagingSystem(data.foragingState);
+      }
+      if (data.festivalAttended) {
+        this.festivalSystem = new FestivalSystem(this, data.festivalAttended);
+      }
       return true;
     } catch {
       this.initNewGame();

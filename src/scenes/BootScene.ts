@@ -160,7 +160,7 @@ export class BootScene extends Phaser.Scene {
 
   private genItems(T: number) {
     const g = this.make.graphics();
-    const ITEM_COLS = 14;
+    const ITEM_COLS = 16;
     const ITEM_ROWS = 8;
     const ITEM_FRAMES = ITEM_COLS * ITEM_ROWS;
     const animalProductColors = [0x8B5A2B, 0xA67B5B, 0xC19A6B, 0xD2B48C, 0xE6D5B8, 0xC8AD7F, 0xB88655];
