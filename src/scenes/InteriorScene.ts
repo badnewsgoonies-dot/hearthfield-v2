@@ -46,20 +46,23 @@ const HOUSE_LAYOUT: BuildingLayout = {
   grid: [
     [1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,1],
-    [1,3,0,0,4,4,4,4,0,0,3,1],
+    [1,3,3,0,4,4,4,4,0,0,3,1],
     [1,0,0,0,4,4,4,4,0,0,0,1],
     [1,0,0,0,0,0,0,0,0,0,0,1],
     [1,3,0,0,0,0,0,0,0,0,3,1],
     [1,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,3,0,0,0,0,3,0,0,1],
     [1,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,1,2,2,1,1,1,1,1],
   ],
   objects: [
     { x: 1, y: 2, label: 'Bed', kind: InteractionKind.BED },
+    { x: 2, y: 2, label: 'Nightstand', kind: InteractionKind.CHEST, data: { msg: 'A small lamp and an old photo.' } },
     { x: 10, y: 2, label: 'Kitchen', kind: InteractionKind.KITCHEN },
     { x: 1, y: 5, label: 'Bookshelf', kind: InteractionKind.CHEST, data: { msg: 'Your grandfather\'s old journals...' } },
     { x: 10, y: 5, label: 'Fireplace', kind: InteractionKind.CHEST, data: { msg: 'The fire crackles warmly.' } },
+    { x: 3, y: 7, label: 'Table', kind: InteractionKind.CHEST, data: { msg: 'A sturdy wooden table.' } },
+    { x: 8, y: 7, label: 'Plant', kind: InteractionKind.CHEST, data: { msg: 'A potted fern. It looks healthy.' } },
   ],
 };
 
@@ -157,61 +160,126 @@ export class InteriorScene extends Phaser.Scene {
     this.solidTiles.clear();
     this.exitTiles.clear();
     
-    // Render tiles
+    // Render tiles with procedural detail
+    const gfx = this.add.graphics().setDepth(0);
+    
     for (let y = 0; y < gh; y++) {
       for (let x = 0; x < gw; x++) {
         const tile = grid[y][x];
         const px = offsetX + x * T;
         const py = offsetY + y * T;
         
-        let color = 0x0a0a1a;
-        switch (tile) {
-          case ITile.FLOOR:
-            color = floorTint;
-            break;
-          case ITile.WALL:
-            color = wallTint;
-            this.solidTiles.add(`${x},${y}`);
-            break;
-          case ITile.DOOR_EXIT:
-            color = 0x443322;
-            this.exitTiles.add(`${x},${y}`);
-            break;
-          case ITile.FURNITURE:
-            color = Phaser.Display.Color.IntegerToColor(floorTint).brighten(10).color;
-            break;
-          case ITile.FLOOR_RUG:
-            color = 0x884433;
-            break;
-          case ITile.FLOOR_HAY:
-            color = 0xc4a84a;
-            break;
-          case ITile.FLOOR_WOOD:
-            color = 0x9e7b5e;
-            break;
-        }
-        
-        const rect = this.add.rectangle(px + T/2, py + T/2, T - 1, T - 1, color).setDepth(0);
-        
-        // Add wall detail (darker border)
         if (tile === ITile.WALL) {
-          this.add.rectangle(px + T/2, py + T/2, T - 1, T - 1)
-            .setStrokeStyle(1, 0x000000, 0.3).setDepth(1);
+          this.solidTiles.add(`${x},${y}`);
+          // Stone/wood wall with mortar lines
+          gfx.fillStyle(wallTint, 1);
+          gfx.fillRect(px, py, T, T);
+          gfx.fillStyle(0x000000, 0.15);
+          gfx.fillRect(px, py + Math.floor(T * 0.33), T, 1);
+          gfx.fillRect(px, py + Math.floor(T * 0.66), T, 1);
+          const vOff = (y % 2 === 0) ? T * 0.5 : 0;
+          gfx.fillRect(px + vOff, py, 1, T);
+          gfx.fillStyle(0xffffff, 0.06);
+          gfx.fillRect(px, py, T, 2);
+          gfx.fillStyle(0x000000, 0.12);
+          gfx.fillRect(px, py + T - 2, T, 2);
+          continue;
         }
-        // Add rug pattern
-        if (tile === ITile.FLOOR_RUG) {
-          this.add.rectangle(px + T/2, py + T/2, T - 4, T - 4)
-            .setStrokeStyle(1, 0xaa6644, 0.5).setDepth(1);
-        }
-        // Door marker
+        
         if (tile === ITile.DOOR_EXIT) {
-          this.add.text(px + T/2, py + T/2, '▼', {
-            fontSize: '16px', color: '#ffdd88',
+          this.exitTiles.add(`${x},${y}`);
+          gfx.fillStyle(0x443322, 1);
+          gfx.fillRect(px, py, T, T);
+          gfx.fillStyle(0x554433, 1);
+          gfx.fillRect(px + 4, py + 4, T - 8, T - 8);
+          gfx.fillStyle(0x332211, 0.3);
+          for (let ly = 8; ly < T - 8; ly += 4) {
+            gfx.fillRect(px + 6, py + ly, T - 12, 1);
+          }
+          this.add.text(px + T/2, py + T/2, '\u25bc', {
+            fontSize: '14px', color: '#ffdd88',
           }).setOrigin(0.5).setDepth(2);
+          continue;
+        }
+        
+        // Floor tiles
+        let baseColor = floorTint;
+        if (tile === ITile.FLOOR_RUG) baseColor = 0x884433;
+        else if (tile === ITile.FLOOR_HAY) baseColor = 0xc4a84a;
+        else if (tile === ITile.FLOOR_WOOD) baseColor = 0x9e7b5e;
+        
+        gfx.fillStyle(baseColor, 1);
+        gfx.fillRect(px, py, T, T);
+        
+        // Wood plank lines
+        if (tile === ITile.FLOOR || tile === ITile.FLOOR_WOOD || tile === ITile.FURNITURE) {
+          gfx.fillStyle(0x000000, 0.08);
+          gfx.fillRect(px, py + Math.floor(T * 0.5), T, 1);
+          const grainX = ((x * 7 + y * 13) % 5) * 8 + 6;
+          gfx.fillStyle(0x000000, 0.04);
+          gfx.fillRect(px + grainX, py, 1, T);
+          if ((x + y) % 2 === 0) {
+            gfx.fillStyle(0x000000, 0.03);
+            gfx.fillRect(px, py, T, T);
+          }
+        }
+        
+        // Rug pattern
+        if (tile === ITile.FLOOR_RUG) {
+          gfx.lineStyle(2, 0xaa6644, 0.6);
+          gfx.strokeRect(px + 3, py + 3, T - 6, T - 6);
+          gfx.fillStyle(0x995533, 0.3);
+          gfx.fillRect(px + T/2 - 4, py + T/2 - 4, 8, 8);
+          if ((x + y) % 3 === 0) {
+            gfx.fillStyle(0xcc8855, 0.2);
+            gfx.fillRect(px + 6, py + 6, T - 12, T - 12);
+          }
+        }
+        
+        // Hay floor
+        if (tile === ITile.FLOOR_HAY) {
+          const seed = x * 31 + y * 17;
+          gfx.fillStyle(0xddbb55, 0.3);
+          for (let s = 0; s < 4; s++) {
+            const sx = ((seed + s * 7) % (T - 6)) + 3;
+            const sy = ((seed + s * 13) % (T - 6)) + 3;
+            const len = 6 + (seed + s) % 8;
+            gfx.fillRect(px + sx, py + sy, len, 1);
+          }
+          if ((x + y) % 2 === 0) {
+            gfx.fillStyle(0x000000, 0.04);
+            gfx.fillRect(px, py, T, T);
+          }
         }
       }
     }
     
+    // Wall shadows cast onto floor
+    for (let y = 0; y < gh; y++) {
+      for (let x = 0; x < gw; x++) {
+        const tile = grid[y][x];
+        if (tile === ITile.WALL || tile === ITile.DOOR_EXIT) continue;
+        const px = offsetX + x * T;
+        const py = offsetY + y * T;
+        if (y > 0 && grid[y-1][x] === ITile.WALL) {
+          gfx.fillStyle(0x000000, 0.15);
+          gfx.fillRect(px, py, T, 6);
+        }
+        if (x > 0 && grid[y][x-1] === ITile.WALL) {
+          gfx.fillStyle(0x000000, 0.08);
+          gfx.fillRect(px, py, 4, T);
+        }
+      }
+    }
+    
+    // Window light patches (house)
+    if (this.building === 'house') {
+      const lightGfx = this.add.graphics().setDepth(1).setAlpha(0.08);
+      lightGfx.fillStyle(0xffffcc, 1);
+      lightGfx.fillRect(offsetX + 3 * T, offsetY + 1 * T, T * 2, T * 3);
+      lightGfx.fillRect(offsetX + 7 * T, offsetY + 1 * T, T * 2, T * 3);
+    }
+
     // Place interactable objects
     for (const obj of this.layout.objects) {
       const px = offsetX + obj.x * T + T/2;
@@ -229,6 +297,9 @@ export class InteriorScene extends Phaser.Scene {
       else if (obj.label.includes('Hay')) { color = 0xaa9944; icon = '🌿'; }
       else if (obj.label.includes('Milking')) { color = 0x667788; icon = '🥛'; }
       else if (obj.label.includes('Buy')) { color = 0x448844; icon = '💰'; }
+      else if (obj.label === 'Nightstand') { color = 0x665544; icon = '🕯'; }
+      else if (obj.label === 'Table') { color = 0x775533; icon = '🪑'; }
+      else if (obj.label === 'Plant') { color = 0x446633; icon = '🌿'; }
       
       const furnitureRect = this.add.rectangle(px, py, T - 4, T - 4, color).setDepth(3);
       this.add.rectangle(px, py, T - 4, T - 4).setStrokeStyle(1, 0x000000, 0.4).setDepth(3);

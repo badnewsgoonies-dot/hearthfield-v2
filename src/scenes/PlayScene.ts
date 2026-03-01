@@ -1310,7 +1310,8 @@ export class PlayScene extends Phaser.Scene {
     // Farm area: roughly tiles 10-28, 10-20
     for (let fx = 10; fx <= 28; fx++) {
       for (const fy of [10, 20]) {
-        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
+        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for north entry
+        if (fx >= 18 && fx <= 20 && fy === 20) continue; // gap for south entry
         const fPos = gridToWorld(fx, fy);
         const fence = this.add.sprite(fPos.x, fPos.y, 'fence');
         fence.setScale(SCALE);
@@ -1394,7 +1395,8 @@ export class PlayScene extends Phaser.Scene {
     // Fences around farm plot (same as createWorldObjects)
     for (let fx = 10; fx <= 28; fx++) {
       for (const fy of [10, 20]) {
-        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
+        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for north entry
+        if (fx >= 18 && fx <= 20 && fy === 20) continue; // gap for south entry
         mark(fx, fy);
       }
     }
