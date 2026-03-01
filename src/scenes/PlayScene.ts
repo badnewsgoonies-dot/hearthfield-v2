@@ -13,6 +13,7 @@ import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
 import { FishingMinigame } from '../systems/fishing';
 import { MiningSystem } from '../systems/mining';
 import { ShopSystem } from '../systems/shop';
+import { WeatherSystem, WeatherType } from '../systems/weather';
 import type { TouchInputState } from '../systems/touchControls';
 
 interface TutorialAdvancePayload {
@@ -48,6 +49,8 @@ export class PlayScene extends Phaser.Scene {
   fishingMinigame!: FishingMinigame;
   miningSystem!: MiningSystem;
   shopSystem!: ShopSystem;
+  weather!: WeatherSystem;
+  currentWeather: WeatherType = WeatherType.SUNNY;
   private isNewGame = false;
   private tutorialStep: number = 0;
   private tutorialActive: boolean = true;
@@ -135,6 +138,10 @@ export class PlayScene extends Phaser.Scene {
     this.fishingMinigame = new FishingMinigame(this);
     this.miningSystem = new MiningSystem(this);
     this.shopSystem = new ShopSystem(this);
+    this.weather = new WeatherSystem(this);
+    const initialWeather = this.weather.rollDailyWeather(this.calendar.season as any);
+    this.currentWeather = initialWeather;
+    this.weather.renderOverlay(initialWeather);
 
     // Emit day start
     this.events.emit(Events.DAY_START, {
@@ -142,6 +149,7 @@ export class PlayScene extends Phaser.Scene {
       season: this.calendar.season,
       year: this.calendar.year
     });
+    this.events.emit(Events.TOAST, { message: `Weather: ${this.currentWeather.toUpperCase()}`, color: '#aaccff' });
 
     // Fade in from intro
     this.cameras.main.fadeIn(1500, 0, 0, 0);
@@ -324,7 +332,7 @@ export class PlayScene extends Phaser.Scene {
       vx *= 0.707; vy *= 0.707;
     }
 
-    const speed = PLAYER_SPEED * (delta / 1000);
+    const speed = PLAYER_SPEED * this.weather.getSpeedModifier(this.currentWeather) * (delta / 1000);
     this.player.x += vx * speed;
     this.player.y += vy * speed;
 
@@ -509,6 +517,10 @@ export class PlayScene extends Phaser.Scene {
       this.events.emit(Events.SEASON_CHANGE, { oldSeason, newSeason: this.calendar.season, year: this.calendar.year });
     }
 
+    if (this.weather.getCropGrowthBonus(this.currentWeather)) {
+      this.farmTiles.forEach((t) => { if (t.cropId) t.watered = true; });
+    }
+
     // Grow crops, reset watered
     this.growCrops();
 
@@ -524,11 +536,16 @@ export class PlayScene extends Phaser.Scene {
     // Auto save
     this.saveGame();
 
+    const newWeather = this.weather.rollDailyWeather(this.calendar.season as any);
+    this.currentWeather = newWeather;
+    this.weather.renderOverlay(newWeather);
+
     this.events.emit(Events.DAY_START, {
       day: this.calendar.day,
       season: this.calendar.season,
       year: this.calendar.year,
     });
+    this.events.emit(Events.TOAST, { message: `Weather: ${this.currentWeather.toUpperCase()}`, color: '#aaccff' });
   }
 
   // ── Crop Growth ──
@@ -618,6 +635,18 @@ export class PlayScene extends Phaser.Scene {
             }
           }
           break;
+        case Tool.FISHING_ROD: {
+          // Launch standalone FishingScene
+          const timeOfDay = this.calendar.timeOfDay < 0.25 ? 'morning' : this.calendar.timeOfDay < 0.5 ? 'afternoon' : this.calendar.timeOfDay < 0.75 ? 'evening' : 'night';
+          this.scene.pause(Scenes.PLAY);
+          this.scene.launch('FishingScene', {
+            playScene: this,
+            mapId: 'farm' as any,
+            timeOfDay: timeOfDay as any,
+            season: this.calendar.season as any,
+          });
+          break;
+        }
       }
     });
 
@@ -695,9 +724,10 @@ export class PlayScene extends Phaser.Scene {
           // UI listens directly to INTERACT(kind=SHOP); no PlayScene-side action needed here.
           break;
         case InteractionKind.DOOR:
-          // Mine entrance
+          // Mine entrance — launch the standalone MineScene
           this.events.emit(Events.TOAST, { message: 'Entering the mines...', color: '#aaccff' });
-          this.events.emit(Events.ENTER_MINE, { floor: 1 });
+          this.scene.pause(Scenes.PLAY);
+          this.scene.launch('MineScene', { playScene: this, floor: this.mine.currentFloor || 1 });
           break;
         case InteractionKind.QUEST_BOARD:
           this.events.emit(Events.TOAST, { message: 'Quest board: Check back soon!', color: '#ffaa44' });

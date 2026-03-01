@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { NPCS } from '../data/registry';
 
 interface DialogueBoxOpenArgs {
   npcId: string;
@@ -7,6 +8,16 @@ interface DialogueBoxOpenArgs {
   onAdvance: () => void;
 }
 
+type UISceneLike = Phaser.Scene & {
+  playScene?: {
+    relationships?: {
+      [npcId: string]: {
+        hearts: number;
+      };
+    };
+  };
+};
+
 export class DialogueBox {
   public isVisible = false;
 
@@ -14,6 +25,7 @@ export class DialogueBox {
   private readonly container: Phaser.GameObjects.Container;
   private readonly portrait: Phaser.GameObjects.Sprite;
   private readonly nameText: Phaser.GameObjects.Text;
+  private readonly heartText: Phaser.GameObjects.Text;
   private readonly dialogueText: Phaser.GameObjects.Text;
 
   private typewriterEvent?: Phaser.Time.TimerEvent;
@@ -60,6 +72,12 @@ export class DialogueBox {
       fontStyle: 'bold',
     });
 
+    this.heartText = this.scene.add.text(-boxWidth / 2 + 230, -34, '', {
+      fontSize: '14px',
+      color: '#ff6f91',
+      fontStyle: 'bold',
+    });
+
     this.dialogueText = this.scene.add.text(-boxWidth / 2 + 100, -10, '', {
       fontSize: '14px',
       color: '#ffffff',
@@ -67,7 +85,7 @@ export class DialogueBox {
       lineSpacing: 2,
     });
 
-    this.container.add([background, this.portrait, this.nameText, this.dialogueText]);
+    this.container.add([background, this.portrait, this.nameText, this.heartText, this.dialogueText]);
 
     this.scene.input.on('pointerdown', this.handlePointerAdvance);
     const keyboard = this.scene.input.keyboard;
@@ -81,16 +99,23 @@ export class DialogueBox {
     });
   }
 
-  show(npcName: string, portraitIndex: number, text: string, onAdvance: () => void): void {
+  show(npcId: string, portraitIndex: number, text: string, onAdvance: () => void): void {
     this.stopTypewriter();
+
+    const npc = NPCS.find((entry) => entry.id === npcId);
+    const npcIndex = NPCS.findIndex((entry) => entry.id === npcId);
+    const resolvedPortrait = npc?.portraitIndex ?? (npcIndex >= 0 ? npcIndex : portraitIndex);
+    const npcName = npc?.name ?? npcId;
+    const hearts = this.resolveHeartCount(npcId);
 
     this.isVisible = true;
     this.onAdvance = onAdvance;
     this.fullText = text;
     this.charIndex = 0;
 
-    this.portrait.setFrame(portraitIndex);
+    this.portrait.setFrame(resolvedPortrait);
     this.nameText.setText(npcName);
+    this.heartText.setText(this.formatHeartMeter(hearts));
     this.dialogueText.setText('');
 
     this.container.setVisible(true);
@@ -126,6 +151,18 @@ export class DialogueBox {
 
   close(_triggerCallback = false): void {
     this.hide();
+  }
+
+  private resolveHeartCount(npcId: string): number {
+    const sceneWithPlay = this.scene as UISceneLike;
+    const heartPoints = sceneWithPlay.playScene?.relationships?.[npcId]?.hearts ?? 0;
+    return Phaser.Math.Clamp(Math.floor(heartPoints / 100), 0, 10);
+  }
+
+  private formatHeartMeter(filledHearts: number): string {
+    const full = '♥'.repeat(filledHearts);
+    const empty = '♡'.repeat(10 - filledHearts);
+    return `${full}${empty}`;
   }
 
   private handleAdvanceInput(): void {
