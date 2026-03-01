@@ -15,6 +15,14 @@ import { MiningSystem } from '../systems/mining';
 import { ShopSystem } from '../systems/shop';
 import { WeatherSystem, WeatherType } from '../systems/weather';
 import type { TouchInputState } from '../systems/touchControls';
+import { QuestSystem, QuestSystemState } from '../systems/quests';
+import { AnimalSystem } from '../systems/animals';
+import { RomanceSystem, RomanceState } from '../systems/romance';
+import { UpgradeSystem, UpgradeState } from '../systems/upgrades';
+import { MachineSystem, MachineState } from '../systems/machines';
+import { AchievementSystem, AchievementState } from '../systems/achievements';
+import { ForagingSystem, ForagingState } from '../systems/foraging';
+import { FestivalSystem } from '../systems/festivals';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -32,7 +40,7 @@ export class PlayScene extends Phaser.Scene {
   relationships: RelationshipState = {};
   quests: QuestState = { activeQuests: [], completedQuests: [] };
   mine: MineState = { currentFloor: 1, maxFloor: 1, health: 100, maxHealth: 100, elevatorsUnlocked: [1] };
-  animalState: AnimalState = { animals: [], hasCoopLevel: 0, hasBarnLevel: 0 };
+  animalState: AnimalState = { animals: [], coopLevel: 0, barnLevel: 0 };
   house: HouseState = { tier: 0 };
   stats: PlayStats = { cropsHarvested: 0, fishCaught: 0, itemsShipped: 0, giftsGiven: 0, recipesCooked: 0, monstersKilled: 0, goldEarned: 0, daysPlayed: 0 };
   unlockedRecipes: string[] = [];
@@ -51,6 +59,14 @@ export class PlayScene extends Phaser.Scene {
   shopSystem!: ShopSystem;
   weather!: WeatherSystem;
   currentWeather: WeatherType = WeatherType.SUNNY;
+  questSystem!: QuestSystem;
+  animalSystem!: AnimalSystem;
+  romanceSystem!: RomanceSystem;
+  upgradeSystem!: UpgradeSystem;
+  machineSystem!: MachineSystem;
+  achievementSystem!: AchievementSystem;
+  foragingSystem!: ForagingSystem;
+  festivalSystem!: FestivalSystem;
   private isNewGame = false;
   private tutorialStep: number = 0;
   private tutorialActive: boolean = true;
@@ -142,6 +158,16 @@ export class PlayScene extends Phaser.Scene {
     const initialWeather = this.weather.rollDailyWeather(this.calendar.season as any);
     this.currentWeather = initialWeather;
     this.weather.renderOverlay(initialWeather);
+
+    // New systems
+    this.questSystem = new QuestSystem(this);
+    this.animalSystem = new AnimalSystem(this);
+    this.romanceSystem = new RomanceSystem(this);
+    this.upgradeSystem = new UpgradeSystem(this);
+    this.machineSystem = new MachineSystem(this);
+    this.achievementSystem = new AchievementSystem(this);
+    this.foragingSystem = new ForagingSystem();
+    this.festivalSystem = new FestivalSystem(this);
 
     // Emit day start
     this.events.emit(Events.DAY_START, {
@@ -288,7 +314,7 @@ export class PlayScene extends Phaser.Scene {
 
     // Init relationships
     for (const npc of NPCS) {
-      this.relationships[npc.id] = { hearts: 0, relation: 0, talkedToday: false, giftedToday: false };
+      this.relationships[npc.id] = { hearts: 0, maxHearts: 8, relation: 0, talkedToday: false, giftedToday: false, giftsThisWeek: 0 };
     }
 
     // Init tool levels
@@ -524,16 +550,50 @@ export class PlayScene extends Phaser.Scene {
     // Grow crops, reset watered
     this.growCrops();
 
-    // Reset NPC daily flags
-    for (const npcId of Object.keys(this.relationships)) {
-      this.relationships[npcId].talkedToday = false;
-      this.relationships[npcId].giftedToday = false;
-    }
+    // NPC daily flags reset by romanceSystem.onDayStart() above
 
     // Restore stamina
     this.player.stamina = this.player.maxStamina;
 
     // Auto save
+    // Daily system ticks
+    this.animalSystem.onDayStart();
+    this.romanceSystem.onDayStart();
+    this.machineSystem.onDayStart();
+    this.foragingSystem.onDayStart(
+      this.calendar.season as any,
+      40, 30,  // FARM_WIDTH, FARM_HEIGHT
+      (x: number, y: number) => {
+        const tile = this.getFarmTile(x, y);
+        return !tile || tile.type !== 0 || !!tile.cropId;
+      }
+    );
+    this.festivalSystem.onDayStart(this.calendar.day, this.calendar.season as any);
+    this.upgradeSystem.checkPendingUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
+    const houseTierUp = this.upgradeSystem.checkHouseUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
+    if (houseTierUp) {
+      this.house.tier++;
+      this.events.emit(Events.BUILDING_UPGRADE, { buildingType: 'house', newLevel: this.house.tier });
+      this.events.emit(Events.TOAST, { message: 'Your house has been upgraded!', color: '#ffdd44' });
+    }
+    this.achievementSystem.checkStats(this.stats);
+    this.achievementSystem.checkYear(this.calendar.year);
+
+    // Auto-water sprinkler tiles
+    const sprinklerTiles = this.machineSystem.getSprinklerTiles();
+    for (const st of sprinklerTiles) {
+      const tile = this.getFarmTile(st.x, st.y);
+      if (tile && (tile.type === 2 || tile.type === 3)) { // TILLED or WATERED
+        tile.type = 3; // WATERED
+        tile.watered = true;
+      }
+    }
+
+    // Weekly reset
+    if (this.calendar.day % 7 === 0) {
+      this.romanceSystem.onWeekStart();
+    }
+
     this.saveGame();
 
     const newWeather = this.weather.rollDailyWeather(this.calendar.season as any);
@@ -729,8 +789,78 @@ export class PlayScene extends Phaser.Scene {
           this.scene.pause(Scenes.PLAY);
           this.scene.launch('MineScene', { playScene: this, floor: this.mine.currentFloor || 1 });
           break;
-        case InteractionKind.QUEST_BOARD:
-          this.events.emit(Events.TOAST, { message: 'Quest board: Check back soon!', color: '#ffaa44' });
+        case InteractionKind.QUEST_BOARD: {
+          const available = this.questSystem.getAvailableQuests(this.calendar.season);
+          const active = this.questSystem.getActiveQuests();
+          if (active.length > 0) {
+            const q = active[0];
+            if (q.completed) {
+              const reward = this.questSystem.turnInQuest(q.def.id);
+              if (reward) {
+                this.player.gold += reward.gold;
+                this.events.emit(Events.GOLD_CHANGE, { amount: reward.gold, newTotal: this.player.gold });
+                if (reward.itemId) this.addToInventory(reward.itemId, reward.itemQty ?? 1);
+                this.events.emit(Events.TOAST, { message: `Quest complete! +${reward.gold}g`, color: '#ffdd44' });
+              }
+            } else {
+              this.events.emit(Events.TOAST, { message: `${q.def.name}: ${q.progress}/${q.def.targetQty}`, color: '#aaccff' });
+            }
+          } else if (available.length > 0) {
+            const quest = available[0];
+            this.questSystem.acceptQuest(quest.id);
+          } else {
+            this.events.emit(Events.TOAST, { message: 'No quests available right now.', color: '#ffaa44' });
+          }
+          break;
+        }
+
+        case InteractionKind.BLACKSMITH: {
+          const tool = this.getEquippedTool();
+          if (tool) {
+            const info = this.upgradeSystem.getToolUpgradeInfo(tool);
+            if (info) {
+              this.events.emit(Events.TOAST, {
+                message: `Upgrade ${tool}: ${info.cost}g + ${info.materialQty} ${info.materialId}`,
+                color: '#ff8844'
+              });
+            } else {
+              this.events.emit(Events.TOAST, { message: 'Tool is already max level!', color: '#aaaaaa' });
+            }
+          } else {
+            this.events.emit(Events.TOAST, { message: 'Equip a tool to upgrade it.', color: '#ffaa44' });
+          }
+          break;
+        }
+
+        case InteractionKind.CARPENTER: {
+          const nextUpgrade = this.upgradeSystem.getNextHouseUpgrade(this.house.tier);
+          if (nextUpgrade) {
+            this.events.emit(Events.TOAST, {
+              message: `${nextUpgrade.name}: ${nextUpgrade.cost}g + ${nextUpgrade.materialQty} ${nextUpgrade.materialId}`,
+              color: '#88cc44'
+            });
+          } else {
+            this.events.emit(Events.TOAST, { message: 'House is fully upgraded!', color: '#aaaaaa' });
+          }
+          break;
+        }
+
+        case InteractionKind.CHEST:
+          this.events.emit(Events.TOAST, { message: 'Chest storage coming soon!', color: '#aaccff' });
+          break;
+
+        case InteractionKind.FORAGEABLE: {
+          const ft = facingTile(this.player.x, this.player.y, this.player.direction);
+          const foraged = this.foragingSystem.collect(ft.x, ft.y);
+          if (foraged) {
+            this.addToInventory(foraged, 1);
+            this.events.emit(Events.TOAST, { message: `Found ${foraged.replace(/_/g, ' ')}!`, color: '#88ff44' });
+          }
+          break;
+        }
+
+        case InteractionKind.ANIMAL:
+          this.events.emit(Events.TOAST, { message: 'Pet your animals from the coop/barn menu.', color: '#ff88cc' });
           break;
       }
     });
@@ -1183,6 +1313,13 @@ export class PlayScene extends Phaser.Scene {
 
   // ── Save / Load ──
 
+  getEquippedTool(): Tool | null {
+    const slot = this.player.inventory[this.player.selectedSlot];
+    if (!slot) return null;
+    const toolValues = Object.values(Tool) as string[];
+    return toolValues.includes(slot.itemId) ? slot.itemId as Tool : null;
+  }
+
   saveGame() {
     const data: SaveData = {
       version: 1,
@@ -1196,10 +1333,17 @@ export class PlayScene extends Phaser.Scene {
       animalState: this.animalState,
       house: this.house,
       stats: this.stats,
-      achievements: [],
+      achievements: this.achievementSystem.getUnlocked(),
       unlockedRecipes: this.unlockedRecipes,
       chestContents: {},
       toolLevels: this.toolLevels,
+      questSystemState: this.questSystem.getState(),
+      romanceState: this.romanceSystem.getState(),
+      upgradeState: this.upgradeSystem.getState(),
+      machineState: this.machineSystem.getState(),
+      achievementState: this.achievementSystem.getState(),
+      foragingState: this.foragingSystem.getState(),
+      festivalAttended: this.festivalSystem.getAttended(),
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     this.events.emit(Events.TOAST, { message: 'Game saved!', color: '#44aaff', duration: 1500 });

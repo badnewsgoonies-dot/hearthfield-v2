@@ -91,6 +91,45 @@ export const ITEMS: ItemDef[] = [
   // Tools (in inventory form)
   { id: 'tool_hoe', name: 'Hoe', category: ItemCategory.TOOL, sellPrice: 0, description: 'Tills soil.', spriteIndex: 62 },
   { id: 'tool_watering_can', name: 'Watering Can', category: ItemCategory.TOOL, sellPrice: 0, description: 'Waters crops.', spriteIndex: 63 },
+
+  // More cooked food
+  { id: 'omelet', name: 'Omelet', category: ItemCategory.FOOD, sellPrice: 125, description: 'Fluffy and delicious.', edible: true, staminaRestore: 40, spriteIndex: 46 },
+  { id: 'pumpkin_soup', name: 'Pumpkin Soup', category: ItemCategory.FOOD, sellPrice: 300, description: 'Creamy and warming.', edible: true, staminaRestore: 60, spriteIndex: 47 },
+  { id: 'blueberry_tart', name: 'Blueberry Tart', category: ItemCategory.FOOD, sellPrice: 150, description: 'Sweet and tangy.', edible: true, staminaRestore: 35, spriteIndex: 48 },
+  { id: 'corn_chowder', name: 'Corn Chowder', category: ItemCategory.FOOD, sellPrice: 175, description: 'Rich and hearty.', edible: true, staminaRestore: 45, spriteIndex: 49 },
+  // Machines
+  { id: 'cheese_press', name: 'Cheese Press', category: ItemCategory.MACHINE, sellPrice: 150, description: 'Turns milk into cheese.', spriteIndex: 58 },
+  { id: 'mayo_machine', name: 'Mayo Machine', category: ItemCategory.MACHINE, sellPrice: 100, description: 'Turns eggs into mayo.', spriteIndex: 59 },
+  { id: 'quality_sprinkler', name: 'Quality Sprinkler', category: ItemCategory.MACHINE, sellPrice: 300, description: 'Waters 8 adjacent tiles.', spriteIndex: 60 },
+  // Forage items
+  { id: 'wild_horseradish', name: 'Wild Horseradish', category: ItemCategory.FORAGE, sellPrice: 50, description: 'A spicy spring root.', spriteIndex: 90 },
+  { id: 'daffodil', name: 'Daffodil', category: ItemCategory.FORAGE, sellPrice: 30, description: 'A cheerful spring flower.', spriteIndex: 91 },
+  { id: 'leek', name: 'Leek', category: ItemCategory.FORAGE, sellPrice: 60, description: 'A tasty spring onion.', spriteIndex: 92 },
+  { id: 'dandelion', name: 'Dandelion', category: ItemCategory.FORAGE, sellPrice: 40, description: 'A common but useful flower.', spriteIndex: 93 },
+  { id: 'grape', name: 'Grape', category: ItemCategory.FORAGE, sellPrice: 80, description: 'Sweet summer fruit.', spriteIndex: 94 },
+  { id: 'spice_berry', name: 'Spice Berry', category: ItemCategory.FORAGE, sellPrice: 80, description: 'Has a fiery kick.', spriteIndex: 95 },
+  { id: 'sweet_pea', name: 'Sweet Pea', category: ItemCategory.FORAGE, sellPrice: 50, description: 'A fragrant flower.', spriteIndex: 96 },
+  { id: 'common_mushroom', name: 'Common Mushroom', category: ItemCategory.FORAGE, sellPrice: 40, description: 'Found in shady areas.', spriteIndex: 97 },
+  { id: 'wild_plum', name: 'Wild Plum', category: ItemCategory.FORAGE, sellPrice: 80, description: 'Tart and delicious.', spriteIndex: 98 },
+  { id: 'hazelnut', name: 'Hazelnut', category: ItemCategory.FORAGE, sellPrice: 90, description: 'A crunchy fall nut.', spriteIndex: 99 },
+  { id: 'blackberry', name: 'Blackberry', category: ItemCategory.FORAGE, sellPrice: 20, description: 'Grows everywhere in fall.', spriteIndex: 100 },
+  { id: 'crocus', name: 'Crocus', category: ItemCategory.FORAGE, sellPrice: 60, description: 'Brightens the snow.', spriteIndex: 101 },
+  { id: 'crystal_fruit', name: 'Crystal Fruit', category: ItemCategory.FORAGE, sellPrice: 150, description: 'A rare winter find.', spriteIndex: 102 },
+  { id: 'snow_yam', name: 'Snow Yam', category: ItemCategory.FORAGE, sellPrice: 100, description: 'Found buried in snow.', spriteIndex: 103 },
+  { id: 'winter_root', name: 'Winter Root', category: ItemCategory.FORAGE, sellPrice: 70, description: 'A hardy tuber.', spriteIndex: 104 },
+  // Animal products
+  { id: 'egg', name: 'Egg', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 50, description: 'A fresh egg.', spriteIndex: 70 },
+  { id: 'large_egg', name: 'Large Egg', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 95, description: 'A large, high-quality egg.', spriteIndex: 71 },
+  { id: 'milk', name: 'Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 125, description: 'Fresh cow milk.', spriteIndex: 72 },
+  { id: 'large_milk', name: 'Large Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Rich, creamy milk.', spriteIndex: 73 },
+  { id: 'cheese', name: 'Cheese', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 200, description: 'Made from fresh milk.', spriteIndex: 75 },
+  { id: 'mayonnaise', name: 'Mayonnaise', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Made from eggs.', spriteIndex: 76 },
+  // Artisan
+  { id: 'honey', name: 'Honey', category: ItemCategory.ARTISAN, sellPrice: 100, description: 'Sweet golden nectar.', spriteIndex: 105 },
+  // Romance items  
+  { id: 'bouquet', name: 'Bouquet', category: ItemCategory.GIFT, sellPrice: 0, description: 'Give to start dating (8+ hearts).', spriteIndex: 106 },
+  { id: 'pendant', name: 'Mermaid Pendant', category: ItemCategory.GIFT, sellPrice: 0, description: 'Used to propose marriage.', spriteIndex: 107 },
+  { id: 'bait', name: 'Bait', category: ItemCategory.RESOURCE, sellPrice: 1, description: 'Attracts fish.', spriteIndex: 108 },
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -127,6 +166,15 @@ export const RECIPES: RecipeDef[] = [
   { id: 'cook_fish_stew', name: 'Fish Stew', resultId: 'fish_stew', resultQty: 1, ingredients: [{ itemId: 'trout', qty: 1 }, { itemId: 'tomato', qty: 1 }, { itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 44 },
   { id: 'cook_farmers_lunch', name: "Farmer's Lunch", resultId: 'farmers_lunch', resultQty: 1, ingredients: [{ itemId: 'parsnip', qty: 1 }, { itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 45 },
   { id: 'cook_miners_treat', name: "Miner's Treat", resultId: 'miners_treat', resultQty: 1, ingredients: [{ itemId: 'mushroom', qty: 2 }, { itemId: 'gold_bar', qty: 1 }], isCooking: true, spriteIndex: 46 },
+
+  // Animal product recipes
+  { id: 'cook_omelet', name: 'Omelet', resultId: 'omelet', resultQty: 1, ingredients: [{ itemId: 'egg', qty: 2 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 46 },
+  { id: 'craft_cheese_press', name: 'Cheese Press', resultId: 'cheese_press', resultQty: 1, ingredients: [{ itemId: 'wood', qty: 45 }, { itemId: 'stone', qty: 45 }, { itemId: 'copper_bar', qty: 1 }], isCooking: false, spriteIndex: 58 },
+  { id: 'craft_mayo_machine', name: 'Mayo Machine', resultId: 'mayo_machine', resultQty: 1, ingredients: [{ itemId: 'wood', qty: 15 }, { itemId: 'stone', qty: 15 }, { itemId: 'copper_bar', qty: 1 }], isCooking: false, spriteIndex: 59 },
+  { id: 'cook_pumpkin_soup', name: 'Pumpkin Soup', resultId: 'pumpkin_soup', resultQty: 1, ingredients: [{ itemId: 'pumpkin', qty: 1 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 47 },
+  { id: 'cook_blueberry_tart', name: 'Blueberry Tart', resultId: 'blueberry_tart', resultQty: 1, ingredients: [{ itemId: 'blueberry', qty: 3 }], isCooking: true, spriteIndex: 48 },
+  { id: 'cook_corn_chowder', name: 'Corn Chowder', resultId: 'corn_chowder', resultQty: 1, ingredients: [{ itemId: 'corn', qty: 2 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 49 },
+  { id: 'craft_quality_sprinkler', name: 'Quality Sprinkler', resultId: 'quality_sprinkler', resultQty: 1, ingredients: [{ itemId: 'iron_bar', qty: 1 }, { itemId: 'gold_bar', qty: 1 }], isCooking: false, spriteIndex: 60 },
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -222,4 +270,5 @@ export const NPCS: NPCDef[] = [
       '4': ['You are a true guardian of nature.', 'I am honored to call you friend.'],
     }
   },
+
 ];

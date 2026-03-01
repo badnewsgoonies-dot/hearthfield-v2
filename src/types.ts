@@ -42,6 +42,7 @@ export enum TileType { GRASS = 0, DIRT = 1, TILLED = 2, WATERED = 3, WATER = 4, 
 
 export enum ItemCategory {
   SEED = 'seed', CROP = 'crop', FISH = 'fish', ORE = 'ore', GEM = 'gem', BAR = 'bar',
+  FORAGE = 'forage', ARTISAN = 'artisan', ANIMAL_PRODUCT = 'animal_product',
   FOOD = 'food', TOOL = 'tool', CRAFTABLE = 'craftable', MACHINE = 'machine',
   GIFT = 'gift', RESOURCE = 'resource', SPECIAL = 'special'
 }
@@ -178,14 +179,16 @@ export interface ShippingBinState {
   items: { itemId: string; qty: number; quality: Quality }[];
 }
 
-export interface RelationshipState {
-  [npcId: string]: {
-    hearts: number;      // 0-1000 (100 per heart, 10 hearts)
-    relation: NPCRelation;
-    talkedToday: boolean;
-    giftedToday: boolean;
-  };
+export interface RelationshipData {
+  hearts: number;
+  maxHearts: number;
+  talkedToday: boolean;
+  giftedToday: boolean;
+  giftsThisWeek: number;
+  relation: NPCRelation;
 }
+
+export type RelationshipState = Record<string, RelationshipData>;
 
 export interface QuestState {
   activeQuests: Quest[];
@@ -211,18 +214,18 @@ export interface MineState {
 
 export interface AnimalState {
   animals: Animal[];
-  hasCoopLevel: number; // 0 = none, 1 = basic, 2 = big
-  hasBarnLevel: number;
+  coopLevel: number;
+  barnLevel: number;
 }
 
 export interface Animal {
   id: string;
-  type: 'chicken' | 'cow' | 'sheep' | 'cat' | 'dog';
+  type: string;
   name: string;
   happiness: number;  // 0-255
-  age: number;        // days
-  fedToday: boolean;
-  pettedToday: boolean;
+  fed: boolean;
+  petted: boolean;
+  daysOwned: number;
   productReady: boolean;
 }
 
@@ -255,8 +258,7 @@ export interface Achievement {
   id: string;
   name: string;
   description: string;
-  condition: (stats: PlayStats) => boolean;
-  unlocked: boolean;
+  icon: string;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -278,7 +280,15 @@ export interface SaveData {
   achievements: string[];          // unlocked achievement IDs
   unlockedRecipes: string[];
   chestContents: { [chestId: string]: (InventorySlot | null)[] };
-  toolLevels: { [tool: string]: number }; // 0=basic, 1=copper, 2=iron, 3=gold, 4=iridium
+  toolLevels: { [tool: string]: number };
+  // New system states
+  questSystemState?: any;
+  romanceState?: any;
+  upgradeState?: any;
+  machineState?: any;
+  achievementState?: any;
+  foragingState?: any;
+  festivalAttended?: string[];
 }
 
 // ════════════════════════════════════════════════════════════
