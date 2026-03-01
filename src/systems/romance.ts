@@ -3,7 +3,7 @@
  * NEW FILE — does not modify any existing files
  */
 import Phaser from 'phaser';
-import { Events, NPCRelation, RelationshipData, RelationshipState } from '../types';
+import { Events, NPCRelation, RelationshipState } from '../types';
 import { NPCS } from '../data/registry';
 
 export interface RomanceState {
@@ -11,22 +11,6 @@ export interface RomanceState {
   spouse?: string;
   weddingDay?: { day: number; season: string; year: number };
 }
-
-interface GiftPreference {
-  loved: string[];
-  liked: string[];
-  disliked: string[];
-  hated: string[];
-}
-
-// Gift preference table per NPC
-const GIFT_PREFS: Record<string, GiftPreference> = {
-  lily:  { loved: ['melon','pumpkin','cauliflower'], liked: ['tomato','blueberry','corn'], disliked: ['stone','coal'], hated: ['sap','clay'] },
-  owen:  { loved: ['copper_bar','iron_bar','gold_bar'], liked: ['copper_ore','iron_ore','gold_ore'], disliked: ['fiber','sap'], hated: ['clay'] },
-  elena: { loved: ['tomato_soup','fish_stew','farmers_lunch'], liked: ['baked_potato','tomato'], disliked: ['stone','coal'], hated: ['sap'] },
-  sage:  { loved: ['legendary_fish','pumpkin'], liked: ['salmon','catfish','tuna'], disliked: ['coal','stone'], hated: ['clay'] },
-  marcus: { loved: ['iron_bar','gold_bar','stone'], liked: ['copper_ore','iron_ore','coal'], disliked: ['daffodil','sweet_pea'], hated: ['dandelion'] },
-};
 
 export class RomanceSystem {
   private scene: Phaser.Scene;
@@ -71,15 +55,14 @@ export class RomanceSystem {
     rel.giftedToday = true;
     rel.giftsThisWeek++;
 
-    const prefs = GIFT_PREFS[npcId];
+    const npc = NPCS.find((n) => n.id === npcId);
     let reaction: 'loved' | 'liked' | 'neutral' | 'disliked' | 'hated' = 'neutral';
     let points = 20; // neutral
 
-    if (prefs) {
-      if (prefs.loved.includes(itemId)) { reaction = 'loved'; points = 80; }
-      else if (prefs.liked.includes(itemId)) { reaction = 'liked'; points = 45; }
-      else if (prefs.hated.includes(itemId)) { reaction = 'hated'; points = -40; }
-      else if (prefs.disliked.includes(itemId)) { reaction = 'disliked'; points = -20; }
+    if (npc) {
+      if (npc.lovedItems.includes(itemId)) { reaction = 'loved'; points = 80; }
+      else if (npc.likedItems.includes(itemId)) { reaction = 'liked'; points = 45; }
+      else if (npc.hatedItems.includes(itemId)) { reaction = 'hated'; points = -40; }
     }
 
     this.addFriendship(npcId, points);

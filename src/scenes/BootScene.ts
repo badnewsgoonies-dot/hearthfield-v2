@@ -160,10 +160,20 @@ export class BootScene extends Phaser.Scene {
 
   private genItems(T: number) {
     const g = this.make.graphics();
-    for (let i=0; i<64; i++) {
-      const col=i%8, row=Math.floor(i/8), ox=col*T, oy=row*T;
+    const ITEM_COLS = 14;
+    const ITEM_ROWS = 8;
+    const ITEM_FRAMES = ITEM_COLS * ITEM_ROWS;
+    const animalProductColors = [0x8B5A2B, 0xA67B5B, 0xC19A6B, 0xD2B48C, 0xE6D5B8, 0xC8AD7F, 0xB88655];
+    const forageColors = [0x556B2F, 0x6B8E23, 0x808000, 0x8B4513, 0x9ACD32, 0x228B22, 0x5F9EA0, 0xA0522D, 0x8F9779, 0x2E8B57, 0x7C6A4A, 0x4F7942, 0x7B6A50, 0x5E7A3C, 0x3F704D];
+    const specialColors = [0xFF2E63, 0x00B4D8, 0xFFB703, 0x9B5DE5];
+
+    for (let i=0; i<ITEM_FRAMES; i++) {
+      const col=i%ITEM_COLS, row=Math.floor(i/ITEM_COLS), ox=col*T, oy=row*T;
       const hue=(i*47+30)%360;
-      const c = Phaser.Display.Color.HSLToColor(hue/360,0.7,0.5).color;
+      let c = Phaser.Display.Color.HSLToColor(hue/360,0.7,0.5).color;
+      if (i >= 70 && i <= 76) c = animalProductColors[i - 70];
+      else if (i >= 90 && i <= 104) c = forageColors[i - 90];
+      else if (i >= 105 && i <= 108) c = specialColors[i - 105];
       g.fillStyle(0x2A2A3A); g.fillRect(ox,oy,T,T);
       if (i<8) { g.fillStyle(0xBB9955); g.fillRect(ox+4,oy+3,8,10); g.fillStyle(c); g.fillRect(ox+5,oy+5,6,4); }
       else if (i<16) { g.fillStyle(c); g.fillRect(ox+4,oy+4,8,8); g.fillStyle(0x228B22); g.fillRect(ox+6,oy+2,4,2); }
@@ -174,11 +184,11 @@ export class BootScene extends Phaser.Scene {
       else if (i<56) { g.fillStyle(0x8B6914); g.fillRect(ox+7,oy+4,2,10); g.fillStyle(c); g.fillRect(ox+4,oy+2,8,4); }
       else { g.fillStyle(c); g.fillRect(ox+3,oy+3,10,10); g.fillStyle(0x222222); g.fillRect(ox+5,oy+5,6,6); g.fillStyle(c); g.fillRect(ox+6,oy+6,4,4); }
     }
-    g.generateTexture('items', T*8, T*8); g.destroy();
+    g.generateTexture('items', T*ITEM_COLS, T*ITEM_ROWS); g.destroy();
     const iTex = this.textures.get('items');
-    for (let i = 0; i < 64; i++) {
-      const col = i % 8;
-      const row = Math.floor(i / 8);
+    for (let i = 0; i < ITEM_FRAMES; i++) {
+      const col = i % ITEM_COLS;
+      const row = Math.floor(i / ITEM_COLS);
       iTex.add(i, 0, col * T, row * T, T, T);
     }
   }

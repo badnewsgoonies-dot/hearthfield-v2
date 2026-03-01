@@ -93,10 +93,10 @@ export const ITEMS: ItemDef[] = [
   { id: 'tool_watering_can', name: 'Watering Can', category: ItemCategory.TOOL, sellPrice: 0, description: 'Waters crops.', spriteIndex: 63 },
 
   // More cooked food
-  { id: 'omelet', name: 'Omelet', category: ItemCategory.FOOD, sellPrice: 125, description: 'Fluffy and delicious.', edible: true, staminaRestore: 40, spriteIndex: 46 },
-  { id: 'pumpkin_soup', name: 'Pumpkin Soup', category: ItemCategory.FOOD, sellPrice: 300, description: 'Creamy and warming.', edible: true, staminaRestore: 60, spriteIndex: 47 },
-  { id: 'blueberry_tart', name: 'Blueberry Tart', category: ItemCategory.FOOD, sellPrice: 150, description: 'Sweet and tangy.', edible: true, staminaRestore: 35, spriteIndex: 48 },
-  { id: 'corn_chowder', name: 'Corn Chowder', category: ItemCategory.FOOD, sellPrice: 175, description: 'Rich and hearty.', edible: true, staminaRestore: 45, spriteIndex: 49 },
+  { id: 'omelet', name: 'Omelet', category: ItemCategory.FOOD, sellPrice: 125, description: 'Fluffy and delicious.', edible: true, staminaRestore: 40, spriteIndex: 74 },
+  { id: 'pumpkin_soup', name: 'Pumpkin Soup', category: ItemCategory.FOOD, sellPrice: 300, description: 'Creamy and warming.', edible: true, staminaRestore: 60, spriteIndex: 77 },
+  { id: 'blueberry_tart', name: 'Blueberry Tart', category: ItemCategory.FOOD, sellPrice: 150, description: 'Sweet and tangy.', edible: true, staminaRestore: 35, spriteIndex: 78 },
+  { id: 'corn_chowder', name: 'Corn Chowder', category: ItemCategory.FOOD, sellPrice: 175, description: 'Rich and hearty.', edible: true, staminaRestore: 45, spriteIndex: 79 },
   // Machines
   { id: 'cheese_press', name: 'Cheese Press', category: ItemCategory.MACHINE, sellPrice: 150, description: 'Turns milk into cheese.', spriteIndex: 58 },
   { id: 'mayo_machine', name: 'Mayo Machine', category: ItemCategory.MACHINE, sellPrice: 100, description: 'Turns eggs into mayo.', spriteIndex: 59 },
@@ -122,13 +122,9 @@ export const ITEMS: ItemDef[] = [
   { id: 'large_egg', name: 'Large Egg', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 95, description: 'A large, high-quality egg.', spriteIndex: 71 },
   { id: 'milk', name: 'Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 125, description: 'Fresh cow milk.', spriteIndex: 72 },
   { id: 'large_milk', name: 'Large Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Rich, creamy milk.', spriteIndex: 73 },
+  { id: 'wool', name: 'Wool', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 340, description: 'Soft and fluffy sheep wool.', spriteIndex: 80 },
   { id: 'cheese', name: 'Cheese', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 200, description: 'Made from fresh milk.', spriteIndex: 75 },
   { id: 'mayonnaise', name: 'Mayonnaise', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Made from eggs.', spriteIndex: 76 },
-  // Artisan
-  { id: 'honey', name: 'Honey', category: ItemCategory.ARTISAN, sellPrice: 100, description: 'Sweet golden nectar.', spriteIndex: 105 },
-  // Romance items  
-  { id: 'bouquet', name: 'Bouquet', category: ItemCategory.GIFT, sellPrice: 0, description: 'Give to start dating (8+ hearts).', spriteIndex: 106 },
-  { id: 'pendant', name: 'Mermaid Pendant', category: ItemCategory.GIFT, sellPrice: 0, description: 'Used to propose marriage.', spriteIndex: 107 },
   { id: 'bait', name: 'Bait', category: ItemCategory.RESOURCE, sellPrice: 1, description: 'Attracts fish.', spriteIndex: 108 },
 ];
 
