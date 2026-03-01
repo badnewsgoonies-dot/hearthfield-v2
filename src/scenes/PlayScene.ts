@@ -209,58 +209,58 @@ export class PlayScene extends Phaser.Scene {
 
     this.calendar = { day: 1, season: Season.SPRING, year: 1, timeOfDay: 0, isPaused: false };
 
-    // Designed farm layout for first-play readability
+    // Designed farm layout — matches composite fence/tree sprites from createWorldObjects
     this.farmTiles = [];
     for (let y = 0; y < FARM_HEIGHT; y++) {
       for (let x = 0; x < FARM_WIDTH; x++) {
         let type = TileType.GRASS;
 
-        // Row 0-2: tree-heavy top edge
-        if (y <= 2 && x % 2 === 0) type = TileType.WOOD;
-
-        // Row 3-5: mine lane and approach path
+        // Row 3-5: mine lane approach path
         if (y === 4 && x >= 22 && x <= 35) type = TileType.PATH;
         if (x >= 34 && x <= 36 && y >= 3 && y <= 5) type = TileType.STONE;
 
-        // Row 6-9: house zone and path toward fields
-        if (x >= 16 && x <= 25 && y >= 6 && y <= 9) type = TileType.DIRT;
-        if ((x === 21 || x === 22) && y >= 8 && y <= 16) type = TileType.PATH;
+        // Row 5-9: house zone (dirt yard) and path toward farm
+        if (x >= 17 && x <= 24 && y >= 6 && y <= 9) type = TileType.DIRT;
+        if ((x === 19 || x === 20) && y >= 8 && y <= 10) type = TileType.PATH;
 
-        // Row 10-14: farm plots
-        if (x >= 9 && x <= 29 && y >= 10 && y <= 14) type = TileType.DIRT;
-        if (y >= 11 && y <= 13 && (
-          (x >= 10 && x <= 12) ||
-          (x >= 14 && x <= 16) ||
-          (x >= 18 && x <= 20) ||
-          (x >= 22 && x <= 24)
+        // Fence border tiles (render as dirt under composite fence sprites)
+        if ((x >= 10 && x <= 28 && (y === 10 || y === 20)) ||
+            (y >= 10 && y <= 20 && (x === 10 || x === 28))) {
+          type = TileType.DIRT;
+        }
+        // Entry gap in north fence
+        if (x >= 18 && x <= 20 && y === 10) type = TileType.PATH;
+
+        // Row 11-19: farm interior (dirt with tilled starter plots)
+        if (x >= 11 && x <= 27 && y >= 11 && y <= 19) type = TileType.DIRT;
+
+        // Central path through farm
+        if ((x === 19 || x === 20) && y >= 10 && y <= 20) type = TileType.PATH;
+
+        // Starter tilled plots (4 plots of 3×3 each)
+        if (y >= 12 && y <= 14 && (
+          (x >= 12 && x <= 14) ||
+          (x >= 16 && x <= 18) ||
+          (x >= 21 && x <= 23) ||
+          (x >= 25 && x <= 27)
         )) {
           type = TileType.TILLED;
         }
 
-        // Farm fences with path gates
-        if ((x >= 9 && x <= 29 && (y === 9 || y === 15)) || (y >= 9 && y <= 15 && (x === 9 || x === 29))) {
-          type = TileType.WOOD;
-        }
-        if ((x === 21 || x === 22) && (y === 9 || y === 15)) type = TileType.PATH;
+        // Row 20-22: town connector — stone path east-west
+        if (y === 21 && x >= 4 && x <= 35) type = TileType.STONE;
+        if ((x === 19 || x === 20) && y >= 20 && y <= 24) type = TileType.PATH;
+        if (x >= 30 && x <= 33 && y >= 15 && y <= 17) type = TileType.PATH;
 
-        // Row 15-18: town connector path
-        if (y === 16 && x >= 4 && x <= 35) type = TileType.STONE;
-        if (x === 21 && y >= 16 && y <= 22) type = TileType.PATH;
-        if (x >= 28 && x <= 30 && y >= 15 && y <= 17) type = TileType.PATH;
+        // Row 22-25: town area
+        if (y >= 22 && y <= 25 && x >= 8 && x <= 32) type = TileType.GRASS;
 
-        // Row 19-22: town area
-        if (y >= 19 && y <= 22 && x >= 8 && x <= 32) type = TileType.GRASS;
-        if (y === 20 && x >= 10 && x <= 30) type = TileType.PATH;
+        // Row 23-26: pond and shore
+        if (x >= 4 && x <= 8 && y >= 19 && y <= 22) type = TileType.WATER;
+        if (type !== TileType.WATER && x >= 3 && x <= 9 && y >= 18 && y <= 23) type = TileType.SAND;
 
-        // Row 23-25: pond and shore
-        if (x >= 8 && x <= 12 && y >= 23 && y <= 26) type = TileType.WATER;
-        if (type !== TileType.WATER && x >= 7 && x <= 13 && y >= 22 && y <= 27) type = TileType.SAND;
-        if ((x === 10 || x === 11) && y >= 20 && y <= 23) type = TileType.PATH;
-
-        // Row 26-29: lower edge trees and beach hint
-        if (y >= 26 && y <= 28 && (x % 3 === 0 || x === 0 || x === FARM_WIDTH - 1)) type = TileType.WOOD;
-        if (y >= 26 && x >= 33) type = TileType.SAND;
-        if (y === 29 && x % 2 === 0) type = TileType.WOOD;
+        // Beach at bottom-right
+        if (y >= 27 && x >= 33) type = TileType.SAND;
 
         this.farmTiles.push({ x, y, type, watered: false });
       }
@@ -854,21 +854,21 @@ export class PlayScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(500);
   
     // Interactable objects with labels
-    this.createInteractable(21, 8, 2, InteractionKind.BED);
-    this.createInteractable(19, 8, 3, InteractionKind.KITCHEN);
-    this.createInteractable(14, 11, 1, InteractionKind.CRAFTING_BENCH);
-    this.createInteractable(26, 11, 0, InteractionKind.SHIPPING_BIN);
-    this.createInteractable(32, 16, 4, InteractionKind.SHOP);
+    this.createInteractable(22, 8, 2, InteractionKind.BED);
+    this.createInteractable(18, 8, 3, InteractionKind.KITCHEN);
+    this.createInteractable(12, 16, 1, InteractionKind.CRAFTING_BENCH);
+    this.createInteractable(27, 12, 0, InteractionKind.SHIPPING_BIN);
+    this.createInteractable(28, 23, 4, InteractionKind.SHOP);
     this.createInteractable(35, 4, 5, InteractionKind.DOOR);
-    this.createInteractable(32, 14, 6, InteractionKind.QUEST_BOARD);
+    this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
   
-    this.addLabel(26, 11, 'Shipping Bin');
-    this.addLabel(14, 11, 'Crafting Bench');
-    this.addLabel(21, 8, 'Bed');
-    this.addLabel(19, 8, 'Kitchen');
-    this.addLabel(32, 16, 'Shop');
+    this.addLabel(27, 12, 'Shipping Bin');
+    this.addLabel(12, 16, 'Crafting Bench');
+    this.addLabel(22, 8, 'Bed');
+    this.addLabel(18, 8, 'Kitchen');
+    this.addLabel(28, 23, 'Shop');
     this.addLabel(35, 4, 'Mine Entrance');
-    this.addLabel(32, 14, 'Quest Board');
+    this.addLabel(15, 23, 'Quest Board');
   }
 
   private createInteractable(tileX: number, tileY: number, frame: number, kind: InteractionKind) {
@@ -882,11 +882,11 @@ export class PlayScene extends Phaser.Scene {
 
   private spawnNPCs() {
     const npcPositions: Record<string, { x: number; y: number }> = {
-      elena: { x: 32, y: 17 },   // at the shop
-      owen: { x: 32, y: 13 },    // near quest board
-      lily: { x: 6, y: 20 },     // near the pond area
+      elena: { x: 30, y: 23 },   // near the shop in town
+      owen: { x: 17, y: 23 },    // near quest board in town
+      lily: { x: 6, y: 20 },     // near the pond
       marcus: { x: 35, y: 5 },   // at the mine
-      sage: { x: 15, y: 25 },    // southern path
+      sage: { x: 20, y: 25 },    // town square
     };
 
     for (const npc of NPCS) {
