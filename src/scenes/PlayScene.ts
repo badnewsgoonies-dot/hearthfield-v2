@@ -1105,7 +1105,7 @@ export class PlayScene extends Phaser.Scene {
     this.createInteractable(28, 23, 4, InteractionKind.SHOP);
     this.createInteractable(35, 4, 5, InteractionKind.DOOR);
     this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
-    this.createInteractable(15, 8, 'Blacksmith', InteractionKind.BLACKSMITH);
+    this.createInteractable(10, 23, 'Owen\'s Forge', InteractionKind.BLACKSMITH);
     this.createInteractable(22, 23, 'Carpenter', InteractionKind.CARPENTER);
   
     this.addLabel(27, 12, 'Shipping Bin');
@@ -1139,7 +1139,7 @@ export class PlayScene extends Phaser.Scene {
       owen: { x: 17, y: 23 },    // near quest board in town
       lily: { x: 6, y: 20 },     // near the pond
       marcus: { x: 35, y: 5 },   // at the mine
-      sage: { x: 8, y: 20 },
+      sage: { x: 18, y: 22 },
     };
 
     for (const npc of NPCS) {
@@ -1381,17 +1381,41 @@ export class PlayScene extends Phaser.Scene {
     }
     this.foragingSprites = [];
 
-    const forageItems = this.foragingSystem.getItems();
+    const forageItems = this.foragingSystem.getState().items;
     for (const item of forageItems) {
       const pos = gridToWorld(item.tileX, item.tileY);
       const itemDef = ITEMS.find((i) => i.id === item.itemId);
-      const sprite = this.add.sprite(pos.x, pos.y, 'items', itemDef?.spriteIndex ?? 90);
+      const sprite = this.add.sprite(pos.x, pos.y, 'items', itemDef?.spriteIndex ?? 0);
       sprite.setScale(SCALE);
       sprite.setDepth(ySortDepth(pos.y));
-      sprite.setData('interaction', { kind: InteractionKind.FORAGEABLE, data: item, x: item.tileX, y: item.tileY });
+      sprite.setData('interaction', {
+        kind: InteractionKind.FORAGEABLE,
+        label: item.itemId,
+        data: item,
+        x: item.tileX,
+        y: item.tileY
+      });
       this.objectLayer.add(sprite);
       this.foragingSprites.push(sprite);
     }
+  }
+
+  private getFutureDate(daysToAdd: number): { day: number; season: Season; year: number } {
+    const seasons = [Season.SPRING, Season.SUMMER, Season.FALL, Season.WINTER];
+    let day = this.calendar.day + daysToAdd;
+    let year = this.calendar.year;
+    let seasonIdx = seasons.indexOf(this.calendar.season);
+
+    while (day > 28) {
+      day -= 28;
+      seasonIdx += 1;
+      if (seasonIdx >= seasons.length) {
+        seasonIdx = 0;
+        year += 1;
+      }
+    }
+
+    return { day, season: seasons[seasonIdx], year };
   }
 
   // ── Save / Load ──
