@@ -1,57 +1,151 @@
 import Phaser from 'phaser';
 import {
-  Scenes, Events, HOTBAR_SIZE, TILE_SIZE, SCALE,
-  InventorySlot, Quality, CalendarState, Season
+  Events,
+  HOTBAR_SIZE,
+  InteractionKind,
+  Quality,
+  Scenes,
+  Season,
 } from '../types';
-import { ITEMS, RECIPES } from '../data/registry';
+import { ITEMS, NPCS, RECIPES } from '../data/registry';
+import { InventoryPanel } from '../systems/inventoryPanel';
+import { ShopPanel } from '../systems/shopPanel';
+import { DialogueBox } from '../systems/dialogueBox';
 import { PlayScene } from './PlayScene';
+
+interface CraftingOpenData {
+  cooking: boolean;
+}
+
+interface ToastData {
+  message: string;
+  duration?: number;
+  color?: string;
+}
+
+interface DialogueStartData {
+  npcId: string;
+  text?: string;
+  portraitIndex?: number;
+}
+
+interface InteractData {
+  kind: InteractionKind;
+  targetId?: string;
+  x: number;
+  y: number;
+}
+
+interface AchievementData {
+  achievementId: string;
+  name: string;
+}
 
 export class UIScene extends Phaser.Scene {
   playScene!: PlayScene;
-  hotbarContainer!: Phaser.GameObjects.Container;
-  hotbarSlots: Phaser.GameObjects.Rectangle[] = [];
-  hotbarIcons: Phaser.GameObjects.Sprite[] = [];
-  hotbarQtys: Phaser.GameObjects.Text[] = [];
-  selectorRect!: Phaser.GameObjects.Rectangle;
 
-  // HUD elements
-  goldText!: Phaser.GameObjects.Text;
-  staminaBar!: Phaser.GameObjects.Rectangle;
-  staminaBarBg!: Phaser.GameObjects.Rectangle;
-  dayText!: Phaser.GameObjects.Text;
-  timeText!: Phaser.GameObjects.Text;
-  toastText!: Phaser.GameObjects.Text;
-  toastTimer = 0;
+  private hotbarContainer!: Phaser.GameObjects.Container;
+  private hotbarSlots: Phaser.GameObjects.Rectangle[] = [];
+  private hotbarIcons: Phaser.GameObjects.Sprite[] = [];
+  private hotbarQtys: Phaser.GameObjects.Text[] = [];
+  private selectorRect!: Phaser.GameObjects.Rectangle;
 
-  // Dialogue
-  dialogueBox!: Phaser.GameObjects.Container;
-  dialogueText!: Phaser.GameObjects.Text;
+  private goldText!: Phaser.GameObjects.Text;
+  private staminaBar!: Phaser.GameObjects.Rectangle;
+  private staminaBarBg!: Phaser.GameObjects.Rectangle;
+  private dayText!: Phaser.GameObjects.Text;
+  private timeText!: Phaser.GameObjects.Text;
 
-  // Crafting panel
-  craftingPanel!: Phaser.GameObjects.Container;
-  isCraftingOpen = false;
+  private toastText!: Phaser.GameObjects.Text;
+  private toastTimer = 0;
 
-  constructor() { super(Scenes.UI); }
+  private craftingPanel!: Phaser.GameObjects.Container;
+  private craftingTitle!: Phaser.GameObjects.Text;
+  private craftingRows: Phaser.GameObjects.GameObject[] = [];
+  private craftingCookingMode = false;
+  private isCraftingOpen = false;
 
-  init(data: { playScene: PlayScene }) {
+  private inventoryPanel!: InventoryPanel;
+  private shopPanel!: ShopPanel;
+  private dialogueBox!: DialogueBox;
+
+  private isInventoryOpen = false;
+  private isShopOpen = false;
+  private isDialogueOpen = false;
+  private pauseToggled = false;
+
+  constructor() {
+    super(Scenes.UI);
+  }
+
+  init(data: { playScene: PlayScene }): void {
     this.playScene = data.playScene;
   }
 
-  create() {
+  create(): void {
+    this.inventoryPanel = new InventoryPanel(this);
+    this.shopPanel = new ShopPanel(this);
+    this.dialogueBox = new DialogueBox(this);
+
+    this.createHotbar();
+    this.createHud();
+    this.createToast();
+    this.createCraftingPanel();
+    this.setupInput();
+    this.wirePlayEvents();
+
+    this.refreshHotbar();
+    this.refreshGold();
+    this.refreshDay();
+    this.refreshTime();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.inventoryPanel.close();
+      this.shopPanel.close();
+      this.dialogueBox.close(false);
+    });
+  }
+
+  update(_time: number, delta: number): void {
+    const slotSize = 40;
+    const gap = 4;
+    const totalW = HOTBAR_SIZE * (slotSize + gap) - gap;
+    const startX = -totalW / 2;
+    const selected = Phaser.Math.Clamp(this.playScene.player.selectedSlot, 0, HOTBAR_SIZE - 1);
+
+    this.selectorRect.setPosition(startX + selected * (slotSize + gap) + slotSize / 2, 0);
+
+    const ratio = Phaser.Math.Clamp(this.playScene.player.stamina / this.playScene.player.maxStamina, 0, 1);
+    this.staminaBar.width = 120 * ratio;
+    if (ratio > 0.5) this.staminaBar.setFillStyle(0x44cc44);
+    else if (ratio > 0.25) this.staminaBar.setFillStyle(0xcccc44);
+    else this.staminaBar.setFillStyle(0xcc4444);
+
+    if (this.toastText.visible) {
+      this.toastTimer -= delta;
+      if (this.toastTimer <= 0) {
+        this.toastText.setVisible(false);
+      } else if (this.toastTimer < 350) {
+        this.toastText.setAlpha(this.toastTimer / 350);
+      }
+    }
+  }
+
+  private createHotbar(): void {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    // ── Hotbar ──
-    this.hotbarContainer = this.add.container(w / 2, h - 30);
+    this.hotbarContainer = this.add.container(w / 2, h - 30).setDepth(120);
+
     const slotSize = 40;
     const gap = 4;
     const totalW = HOTBAR_SIZE * (slotSize + gap) - gap;
     const startX = -totalW / 2;
 
-    for (let i = 0; i < HOTBAR_SIZE; i++) {
+    for (let i = 0; i < HOTBAR_SIZE; i += 1) {
       const x = startX + i * (slotSize + gap) + slotSize / 2;
-      const bg = this.add.rectangle(x, 0, slotSize, slotSize, 0x222222, 0.8);
-      bg.setStrokeStyle(1, 0x666666);
+      const bg = this.add.rectangle(x, 0, slotSize, slotSize, 0x222222, 0.85);
+      bg.setStrokeStyle(1, 0x666666, 1);
       this.hotbarSlots.push(bg);
       this.hotbarContainer.add(bg);
 
@@ -59,134 +153,204 @@ export class UIScene extends Phaser.Scene {
       this.hotbarIcons.push(icon);
       this.hotbarContainer.add(icon);
 
-      const qty = this.add.text(x + 12, 10, '', { fontSize: '10px', color: '#ffffff' }).setOrigin(1, 1);
+      const qty = this.add
+        .text(x + 12, 10, '', { fontSize: '10px', color: '#ffffff' })
+        .setOrigin(1, 1);
       this.hotbarQtys.push(qty);
       this.hotbarContainer.add(qty);
     }
 
-    this.selectorRect = this.add.rectangle(
-      startX + slotSize / 2, 0, slotSize + 4, slotSize + 4
-    );
-    this.selectorRect.setStrokeStyle(2, 0xffdd44);
-    this.selectorRect.setFillStyle(0xffdd44, 0.1);
+    this.selectorRect = this.add.rectangle(startX + slotSize / 2, 0, slotSize + 4, slotSize + 4);
+    this.selectorRect.setStrokeStyle(2, 0xffdd44, 1);
+    this.selectorRect.setFillStyle(0xffdd44, 0.08);
     this.hotbarContainer.add(this.selectorRect);
+  }
 
-    // ── HUD Top Bar ──
-    const hudBg = this.add.rectangle(w / 2, 18, w, 36, 0x000000, 0.5);
+  private createHud(): void {
+    const w = this.cameras.main.width;
 
-    this.goldText = this.add.text(10, 6, '💰 500g', { fontSize: '16px', color: '#ffdd44' });
-    this.dayText = this.add.text(w / 2, 6, 'Spring 1, Year 1', { fontSize: '16px', color: '#88cc44' }).setOrigin(0.5, 0);
-    this.timeText = this.add.text(w - 10, 6, '6:00 AM', { fontSize: '16px', color: '#aaccff' }).setOrigin(1, 0);
+    this.add.rectangle(w / 2, 18, w, 36, 0x000000, 0.5).setDepth(110);
 
-    // Stamina bar
-    this.staminaBarBg = this.add.rectangle(10, 32, 120, 8, 0x333333);
-    this.staminaBarBg.setOrigin(0, 0.5);
-    this.staminaBar = this.add.rectangle(10, 32, 120, 8, 0x44cc44);
-    this.staminaBar.setOrigin(0, 0.5);
+    this.goldText = this.add.text(10, 6, '500g', { fontSize: '16px', color: '#ffdd44' }).setDepth(111);
+    this.dayText = this.add
+      .text(w / 2, 6, 'Spring Day 1 Year 1', { fontSize: '16px', color: '#88cc44' })
+      .setOrigin(0.5, 0)
+      .setDepth(111);
+    this.timeText = this.add
+      .text(w - 10, 6, '6:00 AM', { fontSize: '16px', color: '#aaccff' })
+      .setOrigin(1, 0)
+      .setDepth(111);
 
-    // Toast
-    this.toastText = this.add.text(w / 2, h - 80, '', {
-      fontSize: '14px', color: '#ffffff', backgroundColor: '#00000088',
-      padding: { x: 8, y: 4 }
-    }).setOrigin(0.5).setVisible(false).setDepth(100);
+    this.staminaBarBg = this.add.rectangle(10, 32, 120, 8, 0x333333).setOrigin(0, 0.5).setDepth(111);
+    this.staminaBar = this.add.rectangle(10, 32, 120, 8, 0x44cc44).setOrigin(0, 0.5).setDepth(112);
+  }
 
-    // Crafting panel (hidden initially)
-    this.createCraftingPanel();
+  private createToast(): void {
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
 
-    // ── Listen to events from PlayScene ──
+    this.toastText = this.add
+      .text(w / 2, h / 2, '', {
+        fontSize: '16px',
+        color: '#ffffff',
+        backgroundColor: '#000000aa',
+        padding: { left: 10, right: 10, top: 6, bottom: 6 },
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(1000);
+  }
+
+  private createCraftingPanel(): void {
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+
+    this.craftingPanel = this.add.container(w / 2, h / 2).setVisible(false).setDepth(910);
+
+    const bg = this.add.rectangle(0, 0, 440, 320, 0x1a1a2e, 0.95);
+    bg.setStrokeStyle(2, 0x88cc44, 1);
+
+    this.craftingTitle = this.add
+      .text(0, -138, 'Crafting', { fontSize: '20px', color: '#88cc44' })
+      .setOrigin(0.5);
+
+    const closeBtn = this.add
+      .text(202, -138, 'X', { fontSize: '20px', color: '#ff6666' })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    closeBtn.on('pointerdown', () => this.closeCrafting());
+
+    this.craftingPanel.add([bg, this.craftingTitle, closeBtn]);
+  }
+
+  private setupInput(): void {
+    const keyboard = this.input.keyboard;
+    if (keyboard) {
+      const keyCodes = [
+        Phaser.Input.Keyboard.KeyCodes.ONE,
+        Phaser.Input.Keyboard.KeyCodes.TWO,
+        Phaser.Input.Keyboard.KeyCodes.THREE,
+        Phaser.Input.Keyboard.KeyCodes.FOUR,
+        Phaser.Input.Keyboard.KeyCodes.FIVE,
+        Phaser.Input.Keyboard.KeyCodes.SIX,
+        Phaser.Input.Keyboard.KeyCodes.SEVEN,
+        Phaser.Input.Keyboard.KeyCodes.EIGHT,
+        Phaser.Input.Keyboard.KeyCodes.NINE,
+        Phaser.Input.Keyboard.KeyCodes.ZERO,
+      ];
+
+      keyCodes.forEach((code, index) => {
+        const key = keyboard.addKey(code);
+        key.on('down', () => this.selectHotbarSlot(index));
+      });
+    }
+
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: unknown, _dx: number, dy: number) => {
+      if (dy === 0) return;
+      const delta = dy > 0 ? 1 : -1;
+      const current = this.playScene.player.selectedSlot;
+      const next = (current + delta + HOTBAR_SIZE) % HOTBAR_SIZE;
+      this.selectHotbarSlot(next);
+    });
+  }
+
+  private wirePlayEvents(): void {
     const ps = this.playScene;
 
-    ps.events.on(Events.INVENTORY_CHANGE, () => this.refreshHotbar());
+    ps.events.on(Events.INVENTORY_CHANGE, () => {
+      this.refreshHotbar();
+      if (this.isCraftingOpen) this.populateCraftingRows();
+    });
     ps.events.on(Events.GOLD_CHANGE, () => this.refreshGold());
     ps.events.on(Events.TIME_TICK, () => this.refreshTime());
     ps.events.on(Events.DAY_START, () => this.refreshDay());
 
-    ps.events.on(Events.TOAST, (data: { message: string; duration?: number; color?: string }) => {
+    ps.events.on(Events.TOAST, (data: ToastData) => {
       this.showToast(data.message, data.duration ?? 2000, data.color ?? '#ffffff');
     });
 
-    ps.events.on(Events.OPEN_CRAFTING, (data: { cooking: boolean }) => {
-      this.openCrafting(data.cooking);
-    });
+    ps.events.on(Events.OPEN_CRAFTING, (data: CraftingOpenData) => this.openCrafting(data.cooking));
     ps.events.on(Events.CLOSE_CRAFTING, () => this.closeCrafting());
+    ps.events.on(Events.OPEN_PAUSE, () => this.togglePause());
+    ps.events.on(Events.OPEN_INVENTORY, () => this.openInventory());
 
-    ps.events.on(Events.OPEN_PAUSE, () => {
-      ps.dayPaused = !ps.dayPaused;
-      this.showToast(ps.dayPaused ? 'PAUSED' : 'Resumed', 1000);
+    ps.events.on(Events.DIALOGUE_START, (data: DialogueStartData) => this.showDialogue(data));
+
+    ps.events.on(Events.INTERACT, (data: InteractData) => {
+      if (data.kind === InteractionKind.SHOP) {
+        this.openShop();
+      }
     });
 
-    // Initial refresh
-    this.refreshHotbar();
-    this.refreshGold();
-    this.refreshDay();
+    ps.events.on(Events.ACHIEVEMENT, (data: AchievementData) => {
+      const label = data.name || data.achievementId;
+      this.showToast(`Achievement Unlocked: ${label}`, 2200, '#ffdd55');
+    });
   }
 
-  update(time: number, delta: number) {
-    // Update selector position
-    const slotSize = 40, gap = 4;
-    const totalW = HOTBAR_SIZE * (slotSize + gap) - gap;
-    const startX = -totalW / 2;
-    const sel = this.playScene.player.selectedSlot;
-    this.selectorRect.setPosition(startX + sel * (slotSize + gap) + slotSize / 2, 0);
-
-    // Stamina bar
-    const ratio = this.playScene.player.stamina / this.playScene.player.maxStamina;
-    this.staminaBar.width = 120 * ratio;
-    const color = ratio > 0.5 ? 0x44cc44 : ratio > 0.25 ? 0xcccc44 : 0xcc4444;
-    this.staminaBar.setFillStyle(color);
-
-    // Toast fade
-    if (this.toastText.visible) {
-      this.toastTimer -= delta;
-      if (this.toastTimer <= 0) this.toastText.setVisible(false);
-      else if (this.toastTimer < 500) this.toastText.setAlpha(this.toastTimer / 500);
-    }
+  private selectHotbarSlot(slotIndex: number): void {
+    this.playScene.player.selectedSlot = Phaser.Math.Clamp(slotIndex, 0, HOTBAR_SIZE - 1);
+    this.playScene.events.emit(Events.INVENTORY_CHANGE, { inventory: this.playScene.player.inventory });
   }
 
-  private refreshHotbar() {
-    for (let i = 0; i < HOTBAR_SIZE; i++) {
+  private refreshHotbar(): void {
+    for (let i = 0; i < HOTBAR_SIZE; i += 1) {
       const slot = this.playScene.player.inventory[i];
       if (slot && slot.qty > 0) {
-        const itemDef = ITEMS.find(it => it.id === slot.itemId);
-        if (itemDef) {
-          this.hotbarIcons[i].setTexture('items', itemDef.spriteIndex);
-          this.hotbarIcons[i].setVisible(true);
-          this.hotbarQtys[i].setText(slot.qty > 1 ? `${slot.qty}` : '');
-          // Quality tint
-          if (slot.quality === Quality.GOLD) this.hotbarSlots[i].setStrokeStyle(1, 0xffd700);
-          else if (slot.quality === Quality.SILVER) this.hotbarSlots[i].setStrokeStyle(1, 0xc0c0c0);
-          else this.hotbarSlots[i].setStrokeStyle(1, 0x666666);
+        const itemDef = ITEMS.find((item) => item.id === slot.itemId);
+        if (!itemDef) {
+          this.hotbarIcons[i].setVisible(false);
+          this.hotbarQtys[i].setText('');
+          this.hotbarSlots[i].setStrokeStyle(1, 0x666666, 1);
+          continue;
         }
+
+        this.hotbarIcons[i].setTexture('items', itemDef.spriteIndex).setVisible(true);
+        this.hotbarQtys[i].setText(slot.qty > 1 ? `${slot.qty}` : '');
+
+        if (slot.quality === Quality.GOLD) this.hotbarSlots[i].setStrokeStyle(1, 0xffd700, 1);
+        else if (slot.quality === Quality.SILVER) this.hotbarSlots[i].setStrokeStyle(1, 0xc0c0c0, 1);
+        else this.hotbarSlots[i].setStrokeStyle(1, 0x666666, 1);
       } else {
         this.hotbarIcons[i].setVisible(false);
         this.hotbarQtys[i].setText('');
-        this.hotbarSlots[i].setStrokeStyle(1, 0x666666);
+        this.hotbarSlots[i].setStrokeStyle(1, 0x666666, 1);
       }
     }
   }
 
-  private refreshGold() {
-    this.goldText.setText(`💰 ${this.playScene.player.gold}g`);
+  private refreshGold(): void {
+    this.goldText.setText(`${this.playScene.player.gold}g`);
   }
 
-  private refreshDay() {
+  private refreshDay(): void {
+    const seasonNames: Record<Season, string> = {
+      [Season.SPRING]: 'Spring',
+      [Season.SUMMER]: 'Summer',
+      [Season.FALL]: 'Fall',
+      [Season.WINTER]: 'Winter',
+    };
+
     const c = this.playScene.calendar;
-    const seasonNames = { spring: 'Spring', summer: 'Summer', fall: 'Fall', winter: 'Winter' };
-    this.dayText.setText(`${seasonNames[c.season]} ${c.day}, Year ${c.year}`);
+    this.dayText.setText(`${seasonNames[c.season]} Day ${c.day} Year ${c.year}`);
   }
 
-  private refreshTime() {
+  private refreshTime(): void {
     const t = this.playScene.calendar.timeOfDay;
-    // 0 = 6am, 1 = 2am next day (20 hour span)
-    const totalMinutes = Math.floor(t * 20 * 60); // 20 game hours
-    const hour = 6 + Math.floor(totalMinutes / 60);
+    const totalMinutes = Math.floor(t * 20 * 60);
+    const absoluteHour = 6 + Math.floor(totalMinutes / 60);
     const minute = totalMinutes % 60;
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    const ampm = hour >= 12 && hour < 24 ? 'PM' : 'AM';
-    this.timeText.setText(`${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`);
+
+    const normalizedHour = absoluteHour % 24;
+    const isPm = normalizedHour >= 12;
+    const hour12 = normalizedHour === 0 ? 12 : normalizedHour > 12 ? normalizedHour - 12 : normalizedHour;
+    const ampm = isPm ? 'PM' : 'AM';
+
+    this.timeText.setText(`${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`);
   }
 
-  private showToast(message: string, duration: number, color = '#ffffff') {
+  private showToast(message: string, duration: number, color = '#ffffff'): void {
     this.toastText.setText(message);
     this.toastText.setColor(color);
     this.toastText.setVisible(true);
@@ -194,75 +358,160 @@ export class UIScene extends Phaser.Scene {
     this.toastTimer = duration;
   }
 
-  private createCraftingPanel() {
-    const w = this.cameras.main.width;
-    const h = this.cameras.main.height;
-    this.craftingPanel = this.add.container(w / 2, h / 2).setVisible(false).setDepth(200);
-
-    const bg = this.add.rectangle(0, 0, 400, 300, 0x1a1a2e, 0.95);
-    bg.setStrokeStyle(2, 0x88cc44);
-    this.craftingPanel.add(bg);
-
-    const title = this.add.text(0, -130, 'Crafting', { fontSize: '20px', color: '#88cc44' }).setOrigin(0.5);
-    this.craftingPanel.add(title);
-
-    const closeBtn = this.add.text(180, -130, '✕', { fontSize: '20px', color: '#ff4444' })
-      .setOrigin(0.5).setInteractive({ useHandCursor: true });
-    closeBtn.on('pointerdown', () => this.closeCrafting());
-    this.craftingPanel.add(closeBtn);
-  }
-
-  private openCrafting(cooking: boolean) {
-    this.isCraftingOpen = true;
-    this.craftingPanel.setVisible(true);
-    this.playScene.dayPaused = true;
-
-    // Clear old recipe buttons
-    const children = this.craftingPanel.getAll();
-    for (let i = children.length - 1; i >= 3; i--) {
-      (children[i] as Phaser.GameObjects.GameObject).destroy();
+  private openInventory(): void {
+    if (this.isInventoryOpen) {
+      this.closeInventory();
+      return;
     }
 
-    // Populate available recipes
-    const available = RECIPES.filter(r => {
-      if (cooking && !r.isCooking) return false;
-      if (!cooking && r.isCooking) return false;
-      return this.playScene.unlockedRecipes.includes(r.id);
+    this.isInventoryOpen = true;
+    this.applyPauseState();
+
+    this.inventoryPanel.open(
+      this.playScene.player.inventory,
+      () => this.closeInventory(),
+      (fromIndex: number, toIndex: number) => {
+        const inv = this.playScene.player.inventory;
+        const temp = inv[fromIndex];
+        inv[fromIndex] = inv[toIndex];
+        inv[toIndex] = temp;
+        this.playScene.events.emit(Events.INVENTORY_CHANGE, { inventory: inv });
+      }
+    );
+  }
+
+  private closeInventory(): void {
+    if (!this.isInventoryOpen) return;
+    this.isInventoryOpen = false;
+    this.inventoryPanel.close();
+    this.applyPauseState();
+  }
+
+  private openCrafting(cooking: boolean): void {
+    this.isCraftingOpen = true;
+    this.craftingCookingMode = cooking;
+    this.craftingPanel.setVisible(true);
+    this.applyPauseState();
+
+    this.craftingTitle.setText(cooking ? 'Cooking' : 'Crafting');
+    this.populateCraftingRows();
+  }
+
+  private populateCraftingRows(): void {
+    this.craftingRows.forEach((obj) => obj.destroy());
+    this.craftingRows = [];
+
+    const recipes = RECIPES.filter((recipe) => {
+      if (recipe.isCooking !== this.craftingCookingMode) return false;
+      return this.playScene.unlockedRecipes.includes(recipe.id);
     });
 
-    let y = -90;
-    for (const recipe of available.slice(0, 6)) {
-      const canCraft = recipe.ingredients.every(ing =>
-        this.playScene.countItem(ing.itemId) >= ing.qty
-      );
-      const color = canCraft ? '#ffffff' : '#666666';
-      const ingText = recipe.ingredients.map(i => {
-        const def = ITEMS.find(it => it.id === i.itemId);
-        return `${def?.name ?? i.itemId}×${i.qty}`;
-      }).join(', ');
+    let y = -98;
+    for (const recipe of recipes.slice(0, 7)) {
+      const canCraft = recipe.ingredients.every((ing) => this.playScene.countItem(ing.itemId) >= ing.qty);
+      const ingredientsLabel = recipe.ingredients
+        .map((ing) => {
+          const def = ITEMS.find((item) => item.id === ing.itemId);
+          return `${def?.name ?? ing.itemId}x${ing.qty}`;
+        })
+        .join(', ');
 
-      const btn = this.add.text(-180, y, `${recipe.name} (${ingText})`, {
-        fontSize: '13px', color, wordWrap: { width: 360 }
-      }).setInteractive({ useHandCursor: canCraft });
+      const color = canCraft ? '#ffffff' : '#666666';
+      const btn = this.add
+        .text(-200, y, `${recipe.name} (${ingredientsLabel})`, {
+          fontSize: '13px',
+          color,
+          wordWrap: { width: 392 },
+        })
+        .setInteractive({ useHandCursor: canCraft });
 
       if (canCraft) {
         btn.on('pointerover', () => btn.setColor('#ffdd44'));
         btn.on('pointerout', () => btn.setColor('#ffffff'));
         btn.on('pointerdown', () => {
           this.playScene.events.emit(Events.CRAFT_ITEM, { recipeId: recipe.id });
-          this.openCrafting(cooking); // refresh
         });
       }
 
       this.craftingPanel.add(btn);
-      y += 35;
+      this.craftingRows.push(btn);
+      y += 38;
     }
   }
 
-  private closeCrafting() {
+  private closeCrafting(): void {
+    if (!this.isCraftingOpen) return;
     this.isCraftingOpen = false;
     this.craftingPanel.setVisible(false);
-    this.playScene.dayPaused = false;
-    this.playScene.events.emit(Events.CLOSE_CRAFTING);
+    this.craftingRows.forEach((obj) => obj.destroy());
+    this.craftingRows = [];
+    this.applyPauseState();
+  }
+
+  private openShop(): void {
+    if (this.isShopOpen) return;
+
+    this.isShopOpen = true;
+    this.applyPauseState();
+
+    this.shopPanel.open(
+      this.playScene.player.inventory,
+      this.playScene.player.gold,
+      (itemId: string, qty: number) => {
+        const item = ITEMS.find((entry) => entry.id === itemId);
+        if (!item) return;
+        const cost = Math.max(25, item.sellPrice * 2) * qty;
+        this.playScene.events.emit(Events.SHOP_BUY, { itemId, qty, cost });
+      },
+      (slotIndex: number, qty: number) => {
+        const slot = this.playScene.player.inventory[slotIndex];
+        if (!slot) return;
+        const item = ITEMS.find((entry) => entry.id === slot.itemId);
+        if (!item) return;
+        const revenue = Math.floor(item.sellPrice * (Number(slot.quality) || 1)) * qty;
+        this.playScene.events.emit(Events.SHOP_SELL, { itemId: slot.itemId, qty, revenue });
+      },
+      () => {
+        this.isShopOpen = false;
+        this.applyPauseState();
+      }
+    );
+  }
+
+  private showDialogue(data: DialogueStartData): void {
+    const npc = NPCS.find((entry) => entry.id === data.npcId);
+    const text =
+      data.text ??
+      npc?.dialoguePool['0']?.[0] ??
+      '...';
+    const portraitIndex = data.portraitIndex ?? npc?.portraitIndex ?? 0;
+
+    this.isDialogueOpen = true;
+    this.applyPauseState();
+
+    this.dialogueBox.open({
+      npcId: data.npcId,
+      text,
+      portraitIndex,
+      onAdvance: () => {
+        this.isDialogueOpen = false;
+        this.dialogueBox.close(false);
+        this.playScene.events.emit(Events.DIALOGUE_END, { npcId: data.npcId });
+        this.applyPauseState();
+      },
+    });
+  }
+
+  private togglePause(): void {
+    this.pauseToggled = !this.pauseToggled;
+    this.applyPauseState();
+    if (this.pauseToggled) {
+      this.showToast('PAUSED', 1000, '#ffdd55');
+    }
+  }
+
+  private applyPauseState(): void {
+    const panelPaused = this.isInventoryOpen || this.isCraftingOpen || this.isShopOpen || this.isDialogueOpen;
+    this.playScene.dayPaused = this.pauseToggled || panelPaused;
   }
 }

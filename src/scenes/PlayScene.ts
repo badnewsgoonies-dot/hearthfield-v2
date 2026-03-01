@@ -542,7 +542,7 @@ export class PlayScene extends Phaser.Scene {
           break;
         }
         case InteractionKind.SHOP:
-          this.events.emit(Events.TOAST, { message: 'Shop coming soon!', color: '#aaaaff' });
+          // UI listens directly to INTERACT(kind=SHOP); no PlayScene-side action needed here.
           break;
       }
     });
@@ -646,7 +646,7 @@ export class PlayScene extends Phaser.Scene {
     const heartBracket = Math.min(Math.floor(rel.hearts / 200), 4).toString();
     const pool = npcDef.dialoguePool[heartBracket] ?? npcDef.dialoguePool['0'] ?? ['...'];
     const line = pool[Math.floor(Math.random() * pool.length)];
-    this.events.emit(Events.DIALOGUE_START, { npcId });
+    this.events.emit(Events.DIALOGUE_START, { npcId, text: line, portraitIndex: npcDef.portraitIndex });
     this.events.emit(Events.TOAST, { message: `${npcDef.name}: "${line}"`, duration: 3000 });
   }
 

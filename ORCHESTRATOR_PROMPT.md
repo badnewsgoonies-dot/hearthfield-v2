@@ -1,161 +1,189 @@
-# Hearthfield v2 — Expansion Orchestrator
+# Hearthfield v2 — UI Panel Orchestrator
 
-You are the orchestrator for expanding Hearthfield, a 2D farming sim built with TypeScript + Phaser 3.
+You are an orchestrator. You will read the existing codebase, dispatch 4 parallel Codex workers, then verify the build.
 
-The project is at `/home/claude/hearthfield-v2/`
+## STEP 1: Read the codebase
 
-## YOUR STEPS:
+Read these files to understand the architecture:
+- /home/claude/hearthfield-v2/src/types.ts (type contract — ALL types, events, constants)
+- /home/claude/hearthfield-v2/src/data/registry.ts (item/crop/recipe/NPC definitions)
+- /home/claude/hearthfield-v2/src/scenes/PlayScene.ts (main game scene — has all state)
+- /home/claude/hearthfield-v2/src/scenes/UIScene.ts (current UI overlay — you'll replace this)
+- /home/claude/hearthfield-v2/src/systems/fishing.ts (existing system for reference)
+- /home/claude/hearthfield-v2/src/systems/shop.ts (existing system for reference)
+- /home/claude/hearthfield-v2/src/systems/mining.ts (existing system for reference)
 
-### Step 1: Read the type contract and registry
-Run:
+## STEP 2: Dispatch 4 workers in parallel
+
+Run all 4 of these commands simultaneously using & and wait:
+
+### Worker A — Inventory Panel
 ```bash
-cat /home/claude/hearthfield-v2/src/types.ts
-cat /home/claude/hearthfield-v2/src/data/registry.ts
+codex exec --dangerously-bypass-approvals-and-sandbox "
+Read /home/claude/hearthfield-v2/src/types.ts and /home/claude/hearthfield-v2/src/data/registry.ts
+
+Create /home/claude/hearthfield-v2/src/systems/inventoryPanel.ts
+
+Export class InventoryPanel:
+- Constructor takes Phaser.Scene
+- Creates a Phaser.GameObjects.Container at depth 300
+- 36-slot grid (6 cols x 6 rows), slot size 44px, gap 4px
+- Dark background (0x1a1a2e, 0.95 alpha) with 2px green (0x88cc44) stroke border
+- Title 'Inventory' at top center, close button X top-right
+- Each slot: rectangle bg, item sprite from 'items' texture using itemDef.spriteIndex, qty text bottom-right, quality-colored border (gold/silver/normal)
+- Click logic: first click selects slot (yellow border), second click on different slot calls onSwap(indexA, indexB), second click on same slot deselects
+- Method: open(inventory: (InventorySlot|null)[], onClose: ()=>void, onSwap: (a:number, b:number)=>void)
+- Method: close() — hides container
+- Property: isOpen: boolean
+- Import from '../types': InventorySlot, Quality, INVENTORY_SIZE
+- Import from '../data/registry': ITEMS
+- Panel centered in scene. Must work as overlay in Phaser UIScene.
+" &
 ```
 
-### Step 2: Dispatch 4 workers in parallel
+### Worker B — Shop Panel
+```bash
+codex exec --dangerously-bypass-approvals-and-sandbox "
+Read /home/claude/hearthfield-v2/src/types.ts and /home/claude/hearthfield-v2/src/data/registry.ts
 
-Run this exact bash script:
+Create /home/claude/hearthfield-v2/src/systems/shopPanel.ts
+
+Export class ShopPanel:
+- Constructor takes Phaser.Scene
+- Container at depth 300
+- Two tabs: 'Buy' and 'Sell' as clickable text toggles at top
+- BUY tab: scrollable list of shop items. Each row shows item sprite, name, price, and a Buy button. Shop sells all seeds + saplings + tools. Use ITEMS from registry filtered by category SEED or TOOL.
+- SELL tab: shows player inventory items that have sellPrice > 0. Each row shows sprite, name, sell price, Sell button.
+- Buy button calls onBuy(itemId, qty=1). Sell button calls onSell(slotIndex, qty=1).
+- Method: open(inventory: (InventorySlot|null)[], playerGold: number, onBuy: (itemId:string, qty:number)=>void, onSell: (slotIndex:number, qty:number)=>void, onClose: ()=>void)
+- Method: close()
+- Property: isOpen: boolean
+- Import from '../types': InventorySlot, Quality, ItemCategory, Events
+- Import from '../data/registry': ITEMS
+- Dark panel bg 0x1a1a2e alpha 0.95, green border, close X button. Centered.
+" &
+```
+
+### Worker C — Dialogue Box
+```bash
+codex exec --dangerously-bypass-approvals-and-sandbox "
+Read /home/claude/hearthfield-v2/src/types.ts and /home/claude/hearthfield-v2/src/data/registry.ts
+
+Create /home/claude/hearthfield-v2/src/systems/dialogueBox.ts
+
+Export class DialogueBox:
+- Constructor takes Phaser.Scene
+- Container at depth 300, positioned at BOTTOM of screen (y = scene height - 100)
+- Full-width dark box (width 700, height 120) with portrait on left side
+- Portrait: 48x48 sprite from 'portraits' texture using npcDef.portraitIndex
+- NPC name text in green (0x88cc44) above the dialogue text
+- Dialogue text in white, word-wrapped at 550px width, font size 14px
+- Typewriter effect: text appears character by character (30ms per char)
+- Click anywhere or press SPACE/E to: if typewriter still running, show full text instantly. If text fully shown, call onAdvance.
+- Method: show(npcName: string, portraitIndex: number, text: string, onAdvance: ()=>void)
+- Method: hide()
+- Property: isVisible: boolean
+- Import from '../types': just what you need
+- The box should look like a classic RPG dialogue box with rounded-ish feel (use rectangle with stroke).
+" &
+```
+
+### Worker D — NEW UIScene (replaces current)
+```bash
+codex exec --dangerously-bypass-approvals-and-sandbox "
+Read ALL of these files:
+- /home/claude/hearthfield-v2/src/types.ts
+- /home/claude/hearthfield-v2/src/data/registry.ts  
+- /home/claude/hearthfield-v2/src/scenes/PlayScene.ts (understand its public fields: player, calendar, farmTiles, shippingBin, relationships, unlockedRecipes, dayPaused, npcSprites, fishingMinigame, and methods: addToInventory, removeFromSlot, removeItem, countItem, saveGame, loadGame)
+
+Now create /home/claude/hearthfield-v2/src/scenes/UISceneNew.ts
+
+This REPLACES the old UIScene. Export class UIScene (same name) that extends Phaser.Scene with key Scenes.UI.
+
+It must import and instantiate these panel classes:
+- import { InventoryPanel } from '../systems/inventoryPanel'
+- import { ShopPanel } from '../systems/shopPanel'  
+- import { DialogueBox } from '../systems/dialogueBox'
+
+The UIScene must have:
+
+1. HOTBAR — same as current: 12 slots at bottom, shows items with sprites/qty/quality, yellow selector follows selectedSlot. Number keys 1-0 and scroll to change slot.
+
+2. HUD — top bar with gold text left, Season Day Year N center, time right. Stamina bar below gold.
+
+3. TOAST system — centered text that fades after duration.
+
+4. INVENTORY — when PlayScene emits Events.OPEN_INVENTORY, open InventoryPanel with current inventory. onSwap swaps the two slots in player.inventory array and emits Events.INVENTORY_CHANGE. onClose resumes game.
+
+5. CRAFTING — when PlayScene emits Events.OPEN_CRAFTING, show crafting panel (reuse the crafting panel logic from the old UIScene — recipe list with clickable craft buttons that emit Events.CRAFT_ITEM).
+
+6. SHOP — when PlayScene emits Events.INTERACT with kind SHOP (listen to this!), open ShopPanel. onBuy emits Events.SHOP_BUY. onSell emits Events.SHOP_SELL.
+
+7. DIALOGUE — when PlayScene emits Events.DIALOGUE_START with {npcId, text, portraitIndex}, show DialogueBox. onAdvance hides it and emits Events.DIALOGUE_END.
+
+8. PAUSE — Events.OPEN_PAUSE toggles dayPaused, shows PAUSED toast.
+
+9. All panels: when any panel is open, set playScene.dayPaused = true. On close, set it false (unless another panel is still open).
+
+Event listeners to wire (on playScene.events):
+- Events.INVENTORY_CHANGE -> refreshHotbar()
+- Events.GOLD_CHANGE -> refreshGold()  
+- Events.TIME_TICK -> refreshTime()
+- Events.DAY_START -> refreshDay()
+- Events.TOAST -> showToast()
+- Events.OPEN_CRAFTING -> openCrafting()
+- Events.CLOSE_CRAFTING -> closeCrafting()
+- Events.OPEN_PAUSE -> togglePause()
+- Events.OPEN_INVENTORY -> openInventory()
+- Events.DIALOGUE_START -> showDialogue()
+- Events.INTERACT with kind==SHOP -> openShop()
+- Events.ACHIEVEMENT -> show achievement toast with special gold color
+
+Import { ITEMS, RECIPES, NPCS } from '../data/registry'
+
+init(data: { playScene: PlayScene }) receives reference to PlayScene.
+" &
+```
+
+Wait for all 4 workers to complete.
+
+## STEP 3: Fix imports in PlayScene
+
+After workers finish, update PlayScene.ts:
+- Find where it emits Events.DIALOGUE_START and change it to include text and portraitIndex in the payload:
+  - Find the npcDef line and the dialogue line nearby
+  - The emit should be: `this.events.emit(Events.DIALOGUE_START, { npcId, text: line, portraitIndex: npcDef.portraitIndex })`
+- Find the NPC INTERACT handler (InteractionKind.NPC case or handleNPCInteraction method) and make sure SHOP interaction (InteractionKind.SHOP case) emits an INTERACT event that UIScene can catch.
+
+## STEP 4: Replace old UIScene
+
+```bash
+mv /home/claude/hearthfield-v2/src/scenes/UIScene.ts /home/claude/hearthfield-v2/src/scenes/UIScene.old.ts
+mv /home/claude/hearthfield-v2/src/scenes/UISceneNew.ts /home/claude/hearthfield-v2/src/scenes/UIScene.ts
+```
+
+## STEP 5: Update game.ts import
+
+Read /home/claude/hearthfield-v2/src/game.ts — if it imports from './scenes/UIScene', it should still work since we renamed the new file.
+
+## STEP 6: Build and verify
 
 ```bash
 cd /home/claude/hearthfield-v2
-export OPENAI_API_KEY="$OPENAI_API_KEY"
-
-# Worker 1: Shop Scene
-codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -C /home/claude/hearthfield-v2 \
-  "You are building src/scenes/ShopScene.ts for Hearthfield, a Phaser 3 farming sim.
-
-READ these files first:
-- src/types.ts (the type contract - ALL types, events, constants)
-- src/data/registry.ts (item/crop definitions)
-- src/scenes/UIScene.ts (for UI patterns to follow)
-
-CREATE src/scenes/ShopScene.ts that:
-
-1. Extends Phaser.Scene with key 'ShopScene'
-2. Takes init data: { playScene: PlayScene, shopType: 'seeds' | 'tools' | 'general' }
-3. Shows a shop overlay (dark semi-transparent background, centered panel)
-4. Lists items for sale based on shopType:
-   - seeds: All seed items from ITEMS registry, price = item.sellPrice * 2
-   - tools: Tool upgrades, price = 2000 * level
-   - general: Mixed useful items
-5. Each item row shows: icon (sprite from items sheet), name, price, [Buy] button
-6. Buy button checks player gold, deducts gold, adds item to inventory
-7. Uses playScene.events.emit for: Events.GOLD_CHANGE, Events.INVENTORY_CHANGE, Events.TOAST
-8. Has a close button (X) and ESC key to close
-9. Pauses the day timer when open
-10. Exports the class
-
-Import from '../types' and '../data/registry'. Use Phaser text objects and rectangles for UI (matching UIScene patterns). The scene runs as an overlay launched from PlayScene." &
-
-# Worker 2: Fishing Minigame
-codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -C /home/claude/hearthfield-v2 \
-  "You are building src/scenes/FishingScene.ts for Hearthfield, a Phaser 3 farming sim.
-
-READ these files first:
-- src/types.ts (the type contract)
-- src/data/registry.ts (fish definitions with difficulty)
-
-CREATE src/scenes/FishingScene.ts that:
-
-1. Extends Phaser.Scene with key 'FishingScene'
-2. Takes init data: { playScene: PlayScene, mapId: MapId, timeOfDay: TimeOfDay, season: Season }
-3. Implements a timing-based fishing minigame:
-   - Phase 1 'casting': Show a bobber animation, wait 1-4 seconds randomly
-   - Phase 2 'bite': Show exclamation mark, player must press SPACE within 0.8 seconds
-   - Phase 3 'reeling': A progress bar where a 'fish zone' bounces up and down. Player holds SPACE to move a cursor up, releases to let it fall. Keep cursor in the fish zone for 3 seconds to catch.
-   - The fish zone size and speed depends on fish difficulty (easy=large+slow, hard=small+fast)
-4. On success: picks a random eligible fish based on mapId, timeOfDay, season from the FISH registry. Emits Events.FISH_CAUGHT with { fishId, quality }. Quality based on how well player performed.
-5. On failure: Emits Events.FISH_ESCAPED. Shows 'The fish got away...' toast.
-6. Uses Events.TOAST for feedback messages
-7. After catch/escape, auto-closes and returns to PlayScene
-8. Uses Phaser rectangles and graphics for the minigame UI (progress bar, cursor, fish zone)
-9. Exports the class
-
-Import from '../types' and '../data/registry'." &
-
-# Worker 3: Mine Scene
-codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -C /home/claude/hearthfield-v2 \
-  "You are building src/scenes/MineScene.ts for Hearthfield, a Phaser 3 farming sim.
-
-READ these files first:
-- src/types.ts (the type contract - has MineState, Events, etc)
-- src/data/registry.ts (item definitions)
-
-CREATE src/scenes/MineScene.ts that:
-
-1. Extends Phaser.Scene with key 'MineScene'
-2. Takes init data: { playScene: PlayScene, floor: number }
-3. Generates a procedural mine floor:
-   - 15x11 grid of tiles
-   - Randomly places: rocks (breakable for ore/gems), ladders (to next floor), monsters (slimes, bats)
-   - Higher floors = more monsters, better ore
-4. Player movement: Arrow keys / WASD, grid-based movement
-5. Combat: When player moves into a monster tile:
-   - Simple turn-based: player attacks (damage based on pickaxe level), monster attacks back
-   - Player health shown as hearts at top
-   - Monster health shown as bar above monster
-   - On kill: drop random ore/gem, emit Events.MONSTER_KILLED
-6. Rock breaking: Move into rock tile to break it (costs stamina)
-   - Drops: stone, copper_ore, iron_ore, gold_ore based on floor depth
-7. Ladder: Move onto ladder to go to next floor
-   - Every 5 floors: elevator checkpoint (emit Events.TOAST)
-8. HUD: Floor number, health bar, mini inventory of found items
-9. ESC or reaching floor exit returns to PlayScene
-10. Uses playScene to read/write: mine state, player stamina, inventory
-11. Exports the class
-
-Import from '../types' and '../data/registry'. Use colored rectangles for tiles (dark grays for walls, browns for rocks, etc). Keep it simple but playable." &
-
-# Worker 4: Dialogue System
-codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -C /home/claude/hearthfield-v2 \
-  "You are building src/systems/DialogueSystem.ts for Hearthfield, a Phaser 3 farming sim.
-
-READ these files first:
-- src/types.ts (the type contract - has NPCDef, Events, RelationshipState)
-- src/data/registry.ts (NPC definitions with dialogue pools)
-
-CREATE src/systems/DialogueSystem.ts that:
-
-1. Exports a class DialogueSystem (not a Scene - a helper class used by UIScene)
-2. Constructor takes: scene: Phaser.Scene (the UIScene instance)
-3. Methods:
-   a. showDialogue(npcId: string, npcDef: NPCDef, hearts: number): void
-      - Creates a dialogue box at bottom of screen (like RPG games)
-      - Shows NPC portrait (from portraits spritesheet, frame = npcDef.portraitIndex)
-      - Shows NPC name in colored text
-      - Shows dialogue text with typewriter effect (characters appear one by one)
-      - Picks dialogue from npcDef.dialoguePool based on heart bracket (hearts/200, max 4)
-      - SPACE or click advances/skips typewriter, then closes dialogue
-   b. showGiftReaction(npcName: string, reaction: 'love' | 'like' | 'neutral' | 'hate'): void
-      - Shows a brief reaction popup with appropriate emoji and color
-      - love: heart emoji, pink text
-      - like: smile, green text
-      - neutral: '...', gray text
-      - hate: angry, red text
-   c. showChoice(prompt: string, choices: string[]): Promise<number>
-      - Shows a choice dialog with numbered options
-      - Returns the index of the chosen option
-      - Used for quest acceptance, shop browsing, etc
-   d. destroy(): void - cleans up all created game objects
-4. All UI elements use Phaser text, rectangles, and sprites
-5. Typewriter effect: adds one character per 30ms, skippable
-6. Dialogue box: dark semi-transparent rectangle at y=400, full width, 150px tall
-7. Portrait: 48x48 scaled to 96x96, left side of dialogue box
-
-Import from '../types' and '../data/registry'. Export the class as default and named." &
-
-wait
-echo "ALL WORKERS DONE"
+npx esbuild src/game.ts --bundle --outfile=public/game.js --format=esm --platform=browser --sourcemap --target=es2020 2>&1
 ```
 
-### Step 3: Verify all files exist and compile
-```bash
-cd /home/claude/hearthfield-v2
-ls -la src/scenes/ShopScene.ts src/scenes/FishingScene.ts src/scenes/MineScene.ts src/systems/DialogueSystem.ts
-npx esbuild src/scenes/ShopScene.ts src/scenes/FishingScene.ts src/scenes/MineScene.ts src/systems/DialogueSystem.ts --bundle --outdir=/tmp/verify --format=esm --platform=browser --external:phaser 2>&1
-echo "BUILD CHECK DONE"
-```
+If there are TypeScript/import errors, FIX THEM. Common issues:
+- Missing imports — add them
+- Type mismatches — cast or fix
+- PlayScene fields that are private — they should be public (check and fix in PlayScene.ts)
 
-### Step 4: Report
-Tell me which workers succeeded, which failed, and paste any build errors.
+Keep fixing until the build succeeds with zero errors.
+
+## STEP 7: Report
+
+Print a summary of:
+- Which files were created/modified
+- Total lines of code added
+- Any issues fixed during integration
+- BUILD STATUS: PASS or FAIL
