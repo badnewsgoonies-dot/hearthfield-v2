@@ -17,6 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
   roundPixels: true,
   backgroundColor: '#1a1a2e',
   input: {
+    keyboard: true,
     gamepad: true,
     touch: true,
   },

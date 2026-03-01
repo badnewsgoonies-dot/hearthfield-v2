@@ -176,8 +176,9 @@ export class TouchControls {
 
   /** Gamepad polling — call every frame */
   pollGamepad(): void {
-    const pad = this.scene.input.gamepad?.pad1;
-    if (!pad) return;
+    const gp = this.scene.input.gamepad;
+    if (!gp || !gp.pad1) return;
+    const pad = gp.pad1;
 
     // Show controls if gamepad connected
     this.container.setVisible(true);
