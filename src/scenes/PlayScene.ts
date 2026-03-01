@@ -30,6 +30,8 @@ import { ForageRenderer } from '../systems/forageRenderer';
 import { NPCScheduleSystem } from '../systems/npcSchedules';
 import { AchievementPanel } from '../systems/achievementPanel';
 import { ACHIEVEMENTS } from '../data/achievementData';
+import { TownRenderer } from '../systems/townRenderer';
+import { TOWN_LAYOUT } from '../data/townData';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -68,6 +70,7 @@ export class PlayScene extends Phaser.Scene {
   npcLabels: Map<string, Phaser.GameObjects.Text> = new Map();
   farmAnimalSprites: { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; targetX: number; targetY: number; timer: number }[] = [];
   solidTiles: Set<string> = new Set();
+  townSolidTiles: Array<{ x: number; y: number }> = [];
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
   private dayNightOverlay?: Phaser.GameObjects.Rectangle;
   private weatherParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -369,6 +372,13 @@ export class PlayScene extends Phaser.Scene {
 
         // Beach at bottom-right
         if (y >= 27 && x >= 33) type = TileType.SAND;
+
+        // Town stone areas (plazas, paths)
+        for (const area of TOWN_LAYOUT.stoneAreas) {
+          if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2) {
+            type = TileType.STONE;
+          }
+        }
 
         this.farmTiles.push({ x, y, type, watered: false });
       }
@@ -1397,6 +1407,39 @@ export class PlayScene extends Phaser.Scene {
     this.addLabel(28, 11, 'Coop');
     this.addLabel(32, 11, 'Barn');
     this.addLabel(6, 18, 'Fishing Pond');
+
+    // ── Town Buildings & Decorations ──
+    this.renderTown();
+  }
+
+  private renderTown() {
+    this.townSolidTiles = [];
+    const T = SCALED_TILE;
+    const season = this.calendar?.season ?? 'spring';
+
+    const drawObj = (obj: typeof TOWN_LAYOUT.buildings[number]) => {
+      let result: { objects: Phaser.GameObjects.GameObject[]; solidTiles: Array<{ x: number; y: number }> };
+      switch (obj.type) {
+        case 'shop': result = TownRenderer.drawShop(this, obj.tileX, obj.tileY, T); break;
+        case 'blacksmith': result = TownRenderer.drawBlacksmith(this, obj.tileX, obj.tileY, T); break;
+        case 'carpenter': result = TownRenderer.drawCarpenter(this, obj.tileX, obj.tileY, T); break;
+        case 'town_hall': result = TownRenderer.drawTownHall(this, obj.tileX, obj.tileY, T); break;
+        case 'well': result = TownRenderer.drawWell(this, obj.tileX, obj.tileY, T); break;
+        case 'lamppost': result = TownRenderer.drawLamppost(this, obj.tileX, obj.tileY, T); break;
+        case 'bench': result = TownRenderer.drawBench(this, obj.tileX, obj.tileY, T); break;
+        case 'market_stall': result = TownRenderer.drawMarketStall(this, obj.tileX, obj.tileY, T, obj.color ?? 0xcc3333); break;
+        case 'flower_bed': result = TownRenderer.drawFlowerBed(this, obj.tileX, obj.tileY, T, season); break;
+        case 'signpost': result = TownRenderer.drawSignpost(this, obj.tileX, obj.tileY, T); break;
+        default: return;
+      }
+      this.townSolidTiles.push(...result.solidTiles);
+      if (obj.label) {
+        this.addLabel(obj.tileX + (obj.type === 'town_hall' ? 2 : obj.type === 'market_stall' ? 1 : 0), obj.tileY - 1, obj.label);
+      }
+    };
+
+    for (const b of TOWN_LAYOUT.buildings) drawObj(b);
+    for (const d of TOWN_LAYOUT.decorations) drawObj(d);
   }
 
   private buildCollisionMap() {
@@ -1453,6 +1496,11 @@ export class PlayScene extends Phaser.Scene {
     }
     // Door tiles (28,11 and 32,11) are walkable — ENTER_BUILDING triggers there
     
+    // Town buildings and decorations — solid tiles from TownRenderer
+    for (const st of this.townSolidTiles) {
+      mark(st.x, st.y);
+    }
+
     // Map border
     for (let x = -1; x <= FARM_WIDTH; x++) {
       mark(x, -1);
