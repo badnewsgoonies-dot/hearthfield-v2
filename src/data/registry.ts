@@ -122,7 +122,7 @@ export const ITEMS: ItemDef[] = [
   { id: 'large_egg', name: 'Large Egg', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 95, description: 'A large, high-quality egg.', spriteIndex: 71 },
   { id: 'milk', name: 'Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 125, description: 'Fresh cow milk.', spriteIndex: 72 },
   { id: 'large_milk', name: 'Large Milk', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Rich, creamy milk.', spriteIndex: 73 },
-  ({ id: 'wool', name: 'Wool', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 340, description: 'Soft and fluffy sheep wool.', buyPrice: 0, spriteIndex: 74, stackable: true } as ItemDef),
+  { id: 'wool', name: 'Wool', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 340, description: 'Soft and fluffy sheep wool.', spriteIndex: 74 },
   { id: 'cheese', name: 'Cheese', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 200, description: 'Made from fresh milk.', spriteIndex: 75 },
   { id: 'mayonnaise', name: 'Mayonnaise', category: ItemCategory.ANIMAL_PRODUCT, sellPrice: 190, description: 'Made from eggs.', spriteIndex: 76 },
   { id: 'bait', name: 'Bait', category: ItemCategory.RESOURCE, sellPrice: 1, description: 'Attracts fish.', spriteIndex: 108 },

@@ -74,7 +74,10 @@ export interface ItemDef {
   name: string;
   category: ItemCategory;
   sellPrice: number;
+  buyPrice?: number;
   description: string;
+  stackable?: boolean;
+  stackSize?: number;
   edible?: boolean;
   staminaRestore?: number;
   buff?: BuffType;
