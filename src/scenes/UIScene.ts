@@ -8,6 +8,7 @@ import {
   Scenes,
   Season,
 } from '../types';
+import { TouchControls, TouchInputState } from '../systems/touchControls';
 import { ITEMS, NPCS, RECIPES } from '../data/registry';
 import { InventoryPanel } from '../systems/inventoryPanel';
 import { ShopPanel } from '../systems/shopPanel';
@@ -86,6 +87,7 @@ export class UIScene extends Phaser.Scene {
   private isShopOpen = false;
   private isDialogueOpen = false;
   private pauseToggled = false;
+  public touchControls!: TouchControls;
 
   constructor() {
     super(Scenes.UI);
@@ -105,6 +107,7 @@ export class UIScene extends Phaser.Scene {
     this.createToast();
     this.createTutorialOverlay();
     this.createCraftingPanel();
+    this.touchControls = new TouchControls(this);
     this.setupInput();
     this.wirePlayEvents();
 
@@ -121,6 +124,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    this.touchControls.pollGamepad();
+
     const slotSize = 40;
     const gap = 4;
     const totalW = HOTBAR_SIZE * (slotSize + gap) - gap;

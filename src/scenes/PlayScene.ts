@@ -13,6 +13,7 @@ import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
 import { FishingMinigame } from '../systems/fishing';
 import { MiningSystem } from '../systems/mining';
 import { ShopSystem } from '../systems/shop';
+import type { TouchInputState } from '../systems/touchControls';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -182,6 +183,17 @@ export class PlayScene extends Phaser.Scene {
       const dy = this.player.y - this.tutorialStartY;
       if (Math.sqrt(dx * dx + dy * dy) >= 200) this.advanceTutorial(1);
     }
+
+    // Consume single-fire touch/gamepad flags after all handlers have read them
+    const uiScene = this.scene.get(Scenes.UI) as any;
+    if (uiScene?.touchControls) {
+      uiScene.touchControls.consumeJustPressed();
+    }
+  }
+
+  private getTouchState(): TouchInputState | null {
+    const uiScene = this.scene.get(Scenes.UI) as any;
+    return uiScene?.touchControls?.state ?? null;
   }
 
   // ── Initialization ──
@@ -294,6 +306,19 @@ export class PlayScene extends Phaser.Scene {
     if (left) { vx = -1; this.player.direction = Direction.LEFT; }
     if (right) { vx = 1; this.player.direction = Direction.RIGHT; }
 
+    // Touch / gamepad overlay
+    const touch = this.getTouchState();
+    if (touch && (Math.abs(touch.dx) > 0.1 || Math.abs(touch.dy) > 0.1)) {
+      vx = touch.dx;
+      vy = touch.dy;
+      // Set facing direction from strongest axis
+      if (Math.abs(vx) > Math.abs(vy)) {
+        this.player.direction = vx < 0 ? Direction.LEFT : Direction.RIGHT;
+      } else {
+        this.player.direction = vy < 0 ? Direction.UP : Direction.DOWN;
+      }
+    }
+
     // Normalize diagonal
     if (vx !== 0 && vy !== 0) {
       vx *= 0.707; vy *= 0.707;
@@ -328,7 +353,9 @@ export class PlayScene extends Phaser.Scene {
   // ── Tool Use ──
 
   private handleToolInput() {
-    if (Phaser.Input.Keyboard.JustDown(this.keys.space)) {
+    const touch = this.getTouchState();
+    const toolPressed = Phaser.Input.Keyboard.JustDown(this.keys.space) || !!touch?.toolJust;
+    if (toolPressed) {
       const slot = this.player.inventory[this.player.selectedSlot];
       const itemDef = slot ? ITEMS.find((item) => item.id === slot.itemId) : undefined;
       if (slot && itemDef && (itemDef.category === 'seed' || itemDef.edible)) {
@@ -365,7 +392,9 @@ export class PlayScene extends Phaser.Scene {
   // ── Interaction ──
 
   private handleInteractionInput() {
-    if (Phaser.Input.Keyboard.JustDown(this.keys.e)) {
+    const touch = this.getTouchState();
+    const interactPressed = Phaser.Input.Keyboard.JustDown(this.keys.e) || !!touch?.interactJust;
+    if (interactPressed) {
       const target = facingTile(this.player.x, this.player.y, this.player.direction);
       const interaction = this.getInteractionAt(target.x, target.y);
       if (interaction) {
