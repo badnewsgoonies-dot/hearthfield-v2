@@ -332,7 +332,7 @@ export class UIScene extends Phaser.Scene {
       this.showToast(`Achievement Unlocked: ${label}`, 2200, '#ffdd55');
     });
 
-    ps.events.on('tutorial:advance', (data: TutorialAdvanceData) => {
+    ps.events.on('TUTORIAL_ADVANCE', (data: TutorialAdvanceData) => {
       this.tutorialVisible = data.active;
       this.tutorialTargetTile = data.targetTile;
       this.tutorialBox.setVisible(data.active);

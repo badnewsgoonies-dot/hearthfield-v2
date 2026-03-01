@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Events } from '../types';
+import { Events, Tool } from '../types';
 
 export interface TutorialStep {
   id: string;

@@ -52,6 +52,7 @@ export class PlayScene extends Phaser.Scene {
   private tutorialActive: boolean = true;
   private tutorialText?: Phaser.GameObjects.Text;
   private tutorialArrow?: Phaser.GameObjects.Text;
+  private proximityPrompt?: Phaser.GameObjects.Text;
   private tutorialStartX = 0;
   private tutorialStartY = 0;
 
@@ -122,6 +123,11 @@ export class PlayScene extends Phaser.Scene {
       zero: this.input.keyboard!.addKey('ZERO'),
     };
 
+    this.proximityPrompt = this.add.text(0, 0, '', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#ffffff',
+      backgroundColor: '#000000aa', padding: { x: 6, y: 3 },
+    }).setOrigin(0.5).setDepth(10000).setVisible(false);
+
     // Event listeners
     this.setupEventListeners();
 
@@ -147,6 +153,26 @@ export class PlayScene extends Phaser.Scene {
     this.handleToolInput();
     this.handleInteractionInput();
     this.handleHotbarInput();
+    const facing = facingTile(this.player.x, this.player.y, this.player.direction);
+    const interaction = this.getInteractionAt(facing.x, facing.y);
+    if (interaction) {
+      const wp = gridToWorld(facing.x, facing.y);
+      this.proximityPrompt!.setPosition(wp.x, wp.y - SCALED_TILE);
+      const kindLabels: Record<string, string> = {
+        [InteractionKind.BED]: 'Press E — Sleep',
+        [InteractionKind.SHIPPING_BIN]: 'Press E — Ship Item',
+        [InteractionKind.CRAFTING_BENCH]: 'Press E — Craft',
+        [InteractionKind.KITCHEN]: 'Press E — Cook',
+        [InteractionKind.SHOP]: 'Press E — Shop',
+        [InteractionKind.DOOR]: 'Press E — Enter Mine',
+        [InteractionKind.QUEST_BOARD]: 'Press E — Quests',
+        [InteractionKind.NPC]: 'Press E — Talk',
+      };
+      this.proximityPrompt!.setText(kindLabels[interaction.kind] || 'Press E');
+      this.proximityPrompt!.setVisible(true);
+    } else {
+      this.proximityPrompt!.setVisible(false);
+    }
     this.updateDayTimer(delta);
     this.updateCropSprites();
     this.playerSprite.setDepth(ySortDepth(this.player.y));
@@ -189,39 +215,49 @@ export class PlayScene extends Phaser.Scene {
       for (let x = 0; x < FARM_WIDTH; x++) {
         let type = TileType.GRASS;
 
+        // Row 0-2: tree-heavy top edge
         if (y <= 2 && x % 2 === 0) type = TileType.WOOD;
-        if (y === 4 && x >= 20 && x <= 35) type = TileType.PATH;
+
+        // Row 3-5: mine lane and approach path
+        if (y === 4 && x >= 22 && x <= 35) type = TileType.PATH;
         if (x >= 34 && x <= 36 && y >= 3 && y <= 5) type = TileType.STONE;
 
-        if (x >= 17 && x <= 24 && y >= 6 && y <= 9) type = TileType.DIRT;
-        if (x >= 21 && x <= 22 && y >= 8 && y <= 16) type = TileType.PATH;
+        // Row 6-9: house zone and path toward fields
+        if (x >= 16 && x <= 25 && y >= 6 && y <= 9) type = TileType.DIRT;
+        if ((x === 21 || x === 22) && y >= 8 && y <= 16) type = TileType.PATH;
 
-        if (x >= 10 && x <= 28 && y >= 10 && y <= 14) type = TileType.DIRT;
+        // Row 10-14: farm plots
+        if (x >= 9 && x <= 29 && y >= 10 && y <= 14) type = TileType.DIRT;
         if (y >= 11 && y <= 13 && (
-          (x >= 11 && x <= 13) ||
-          (x >= 15 && x <= 17) ||
-          (x >= 19 && x <= 21) ||
-          (x >= 23 && x <= 25)
+          (x >= 10 && x <= 12) ||
+          (x >= 14 && x <= 16) ||
+          (x >= 18 && x <= 20) ||
+          (x >= 22 && x <= 24)
         )) {
           type = TileType.TILLED;
         }
 
-        if ((x >= 10 && x <= 28 && (y === 9 || y === 15)) || (y >= 9 && y <= 15 && (x === 10 || x === 28))) {
+        // Farm fences with path gates
+        if ((x >= 9 && x <= 29 && (y === 9 || y === 15)) || (y >= 9 && y <= 15 && (x === 9 || x === 29))) {
           type = TileType.WOOD;
         }
         if ((x === 21 || x === 22) && (y === 9 || y === 15)) type = TileType.PATH;
 
+        // Row 15-18: town connector path
         if (y === 16 && x >= 4 && x <= 35) type = TileType.STONE;
         if (x === 21 && y >= 16 && y <= 22) type = TileType.PATH;
         if (x >= 28 && x <= 30 && y >= 15 && y <= 17) type = TileType.PATH;
 
+        // Row 19-22: town area
         if (y >= 19 && y <= 22 && x >= 8 && x <= 32) type = TileType.GRASS;
         if (y === 20 && x >= 10 && x <= 30) type = TileType.PATH;
 
+        // Row 23-25: pond and shore
         if (x >= 8 && x <= 12 && y >= 23 && y <= 26) type = TileType.WATER;
         if (type !== TileType.WATER && x >= 7 && x <= 13 && y >= 22 && y <= 27) type = TileType.SAND;
         if ((x === 10 || x === 11) && y >= 20 && y <= 23) type = TileType.PATH;
 
+        // Row 26-29: lower edge trees and beach hint
         if (y >= 26 && y <= 28 && (x % 3 === 0 || x === 0 || x === FARM_WIDTH - 1)) type = TileType.WOOD;
         if (y >= 26 && x >= 33) type = TileType.SAND;
         if (y === 29 && x % 2 === 0) type = TileType.WOOD;
@@ -759,42 +795,45 @@ export class PlayScene extends Phaser.Scene {
   private createWorldObjects() {
     this.objectLayer = this.add.container(0, 0);
 
+    // Use the existing house frame from objects sheet and scale it up as a landmark.
     const housePos = gridToWorld(20, 7);
-    const hasHouseTexture = this.textures.exists('house');
-    const house = hasHouseTexture
-      ? this.add.sprite(housePos.x, housePos.y - 32, 'house')
-      : this.add.sprite(housePos.x, housePos.y - 12, 'objects', 7);
-    house.setScale(hasHouseTexture ? SCALE * 0.8 : SCALE * 2);
+    const house = this.add.sprite(housePos.x, housePos.y - 24, 'objects', 7);
+    house.setScale(SCALE * 2.4);
     house.setDepth(ySortDepth(housePos.y) - 1);
     this.objectLayer.add(house);
 
+    // Place edge trees using the WOOD terrain tile as a tree landmark.
     for (let tx = 0; tx < FARM_WIDTH; tx += 3) {
       const topPos = gridToWorld(tx, 1);
-      const botPos = gridToWorld(tx, 28);
-      const topTree = this.add.sprite(topPos.x, topPos.y, 'terrain', TileType.WOOD);
-      const botTree = this.add.sprite(botPos.x, botPos.y, 'terrain', TileType.WOOD);
-      topTree.setScale(SCALE).setDepth(ySortDepth(topPos.y));
-      botTree.setScale(SCALE).setDepth(ySortDepth(botPos.y));
+      const topTree = this.add.sprite(topPos.x, topPos.y - SCALED_TILE * 0.45, 'terrain', TileType.WOOD);
+      topTree.setScale(SCALE * 1.2);
+      topTree.setDepth(ySortDepth(topPos.y));
       this.objectLayer.add(topTree);
-      this.objectLayer.add(botTree);
+
+      const bottomPos = gridToWorld(tx, 28);
+      const bottomTree = this.add.sprite(bottomPos.x, bottomPos.y - SCALED_TILE * 0.45, 'terrain', TileType.WOOD);
+      bottomTree.setScale(SCALE * 1.2);
+      bottomTree.setDepth(ySortDepth(bottomPos.y));
+      this.objectLayer.add(bottomTree);
     }
 
-    for (let fx = 10; fx <= 28; fx += 1) {
+    // Fences around farm area.
+    for (let fx = 9; fx <= 29; fx++) {
       for (const fy of [9, 15]) {
-        if ((fx === 21 || fx === 22) && fy === 15) continue;
-        const p = gridToWorld(fx, fy);
-        const fence = this.add.sprite(p.x, p.y, 'terrain', TileType.WOOD);
+        if ((fx === 21 || fx === 22) && (fy === 9 || fy === 15)) continue;
+        const fencePos = gridToWorld(fx, fy);
+        const fence = this.add.sprite(fencePos.x, fencePos.y, 'terrain', TileType.WOOD);
         fence.setScale(SCALE);
-        fence.setDepth(ySortDepth(p.y));
+        fence.setDepth(ySortDepth(fencePos.y));
         this.objectLayer.add(fence);
       }
     }
-    for (let fy = 10; fy <= 14; fy += 1) {
-      for (const fx of [10, 28]) {
-        const p = gridToWorld(fx, fy);
-        const fence = this.add.sprite(p.x, p.y, 'terrain', TileType.WOOD);
+    for (let fy = 10; fy <= 14; fy++) {
+      for (const fx of [9, 29]) {
+        const fencePos = gridToWorld(fx, fy);
+        const fence = this.add.sprite(fencePos.x, fencePos.y, 'terrain', TileType.WOOD);
         fence.setScale(SCALE);
-        fence.setDepth(ySortDepth(p.y));
+        fence.setDepth(ySortDepth(fencePos.y));
         this.objectLayer.add(fence);
       }
     }
@@ -827,17 +866,15 @@ export class PlayScene extends Phaser.Scene {
 
   private spawnNPCs() {
     const npcPositions: Record<string, { x: number; y: number }> = {
-      elena: { x: 30, y: 17 },
-      owen: { x: 28, y: 17 },
-      lily: { x: 10, y: 24 },
-      sage: { x: 8, y: 20 },
-      marcus: { x: 35, y: 5 },
+      elena: { x: 30, y: 17 },  // near shop
+      owen: { x: 28, y: 17 },   // near quest board
+      lily: { x: 10, y: 24 },   // near pond
+      marcus: { x: 35, y: 5 },  // near mine
+      sage: { x: 16, y: 20 },   // town path
     };
 
     for (const npc of NPCS) {
-      const fallbackX = 12 + (NPCS.indexOf(npc) % 5) * 4;
-      const fallbackY = 20 + Math.floor(NPCS.indexOf(npc) / 5) * 2;
-      const posDef = npcPositions[npc.id] ?? { x: fallbackX, y: fallbackY };
+      const posDef = npcPositions[npc.id] ?? { x: 20, y: 20 };
       const x = posDef.x;
       const y = posDef.y;
       const pos = gridToWorld(x, y);
@@ -856,7 +893,7 @@ export class PlayScene extends Phaser.Scene {
       color: '#ffffff',
       fontFamily: 'monospace',
       backgroundColor: '#00000088',
-      padding: { x: 3, y: 2 }
+      padding: { x: 3, y: 2 },
     }).setOrigin(0.5).setDepth(1000);
     this.objectLayer.add(label);
   }
@@ -884,7 +921,7 @@ export class PlayScene extends Phaser.Scene {
     this.tutorialStep = step;
 
     const emitState = (payload: TutorialAdvancePayload) => {
-      this.events.emit('tutorial:advance', payload);
+      this.events.emit('TUTORIAL_ADVANCE', payload);
     };
 
     switch (step) {
