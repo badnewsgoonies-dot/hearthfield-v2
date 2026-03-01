@@ -10,6 +10,9 @@ import {
   InteractionKind, InventorySlot
 } from '../types';
 import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
+import { FishingMinigame } from '../systems/fishing';
+import { MiningSystem } from '../systems/mining';
+import { ShopSystem } from '../systems/shop';
 
 export class PlayScene extends Phaser.Scene {
   // Core state
@@ -34,6 +37,9 @@ export class PlayScene extends Phaser.Scene {
   objectLayer!: Phaser.GameObjects.Container;
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  fishingMinigame!: FishingMinigame;
+  miningSystem!: MiningSystem;
+  shopSystem!: ShopSystem;
 
   // Day timer
   dayTimer = 0;
@@ -98,6 +104,10 @@ export class PlayScene extends Phaser.Scene {
 
     // Event listeners
     this.setupEventListeners();
+
+    this.fishingMinigame = new FishingMinigame(this);
+    this.miningSystem = new MiningSystem(this);
+    this.shopSystem = new ShopSystem(this);
 
     // Emit day start
     this.events.emit(Events.DAY_START, {
@@ -579,6 +589,33 @@ export class PlayScene extends Phaser.Scene {
       this.stats.giftsGiven++;
       this.events.emit(Events.RELATIONSHIP_UP, { npcId: data.npcId, newHearts: rel.hearts });
       this.events.emit(Events.TOAST, { message: `${npcDef.name} ${reaction}d the gift!`, color: reaction === 'hate' ? '#ff4444' : '#ff88cc' });
+    });
+
+    this.events.on(Events.FISH_CAUGHT, (data: { fishId: string; quality: Quality }) => {
+      const added = this.addToInventory(data.fishId, 1, data.quality);
+      if (!added) return;
+      this.stats.fishCaught += 1;
+      this.events.emit(Events.STAT_INCREMENT, { stat: 'fishCaught', amount: 1 });
+    });
+
+    this.events.on(Events.SHOP_BUY, (data: { itemId: string; qty: number; cost: number }) => {
+      if (data.cost > this.player.gold) {
+        this.events.emit(Events.TOAST, { message: 'Not enough gold!', color: '#ff4444' });
+        return;
+      }
+
+      const added = this.addToInventory(data.itemId, data.qty);
+      if (!added) return;
+      this.player.gold -= data.cost;
+      this.events.emit(Events.GOLD_CHANGE, { amount: -data.cost, newTotal: this.player.gold });
+    });
+
+    this.events.on(Events.SHOP_SELL, (data: { itemId: string; qty: number; revenue: number }) => {
+      if (this.countItem(data.itemId) < data.qty) return;
+      this.removeItem(data.itemId, data.qty);
+      this.player.gold += data.revenue;
+      this.stats.goldEarned += data.revenue;
+      this.events.emit(Events.GOLD_CHANGE, { amount: data.revenue, newTotal: this.player.gold });
     });
   }
 
