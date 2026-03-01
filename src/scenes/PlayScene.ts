@@ -54,10 +54,9 @@ export class PlayScene extends Phaser.Scene {
   objectLayer!: Phaser.GameObjects.Container;
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
-  foragingSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  foragingSprites: Phaser.GameObjects.Sprite[] = [];
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
   private dayNightOverlay?: Phaser.GameObjects.Rectangle;
-  private weatherParticleManager?: Phaser.GameObjects.Particles.ParticleEmitterManager;
   private weatherParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   fishingMinigame!: FishingMinigame;
   miningSystem!: MiningSystem;
@@ -959,9 +958,14 @@ export class PlayScene extends Phaser.Scene {
             break;
           }
 
-          const spr = this.foragingSprites.get(forageId);
-          if (spr) spr.destroy();
-          this.foragingSprites.delete(forageId);
+          const spr = this.foragingSprites.find(s => {
+            const d = s.getData('interaction');
+            return d?.data?.id === forageId;
+          });
+          if (spr) {
+            spr.destroy();
+            this.foragingSprites = this.foragingSprites.filter(s => s !== spr);
+          }
 
           const itemDef = ITEMS.find((i) => i.id === foraged);
           const itemName = itemDef?.name ?? foraged.replace(/_/g, ' ');
@@ -1430,6 +1434,72 @@ export class PlayScene extends Phaser.Scene {
 
   private updateCropSprites() {
     // Periodic visual refresh — only needed if something external changed
+  }
+
+  private refreshWeatherParticles() {
+    // Clean up existing emitter
+    if (this.weatherParticleEmitter) {
+      this.weatherParticleEmitter.stop();
+      this.weatherParticleEmitter = undefined;
+    }
+    if (this.currentWeather === WeatherType.RAIN || this.currentWeather === WeatherType.STORM) {
+      // Create rain particle effect using Phaser 3.60+ API
+      const { width, height } = this.cameras.main;
+      if (!this.textures.exists('rain_drop')) {
+        const g = this.add.graphics();
+        g.fillStyle(0x8888cc, 0.5);
+        g.fillRect(0, 0, 2, 6);
+        g.generateTexture('rain_drop', 2, 6);
+        g.destroy();
+      }
+      this.weatherParticleEmitter = this.add.particles(0, -20, 'rain_drop', {
+        x: { min: -50, max: width + 50 },
+        y: -20,
+        lifespan: 1200,
+        speedY: { min: 200, max: 350 },
+        speedX: { min: -30, max: -10 },
+        quantity: this.currentWeather === WeatherType.STORM ? 4 : 2,
+        alpha: { start: 0.6, end: 0.1 },
+        scale: { start: 1, end: 0.5 },
+        frequency: 30,
+      });
+      this.weatherParticleEmitter.setScrollFactor(0);
+      this.weatherParticleEmitter.setDepth(9998);
+    }
+  }
+
+  private applySeasonalMapTint() {
+    const { width, height } = this.cameras.main;
+    if (this.seasonalTintOverlay) this.seasonalTintOverlay.destroy();
+    const tints: Record<string, number> = {
+      [Season.SPRING]: 0x88ff88,
+      [Season.SUMMER]: 0xffffaa,
+      [Season.FALL]: 0xffcc88,
+      [Season.WINTER]: 0xaaccff,
+    };
+    const color = tints[this.calendar.season] ?? 0xffffff;
+    this.seasonalTintOverlay = this.add.rectangle(
+      width / 2, height / 2, width, height, color, 0.06
+    );
+    this.seasonalTintOverlay.setScrollFactor(0);
+    this.seasonalTintOverlay.setDepth(9990);
+  }
+
+  private updateDayNightVisual() {
+    const { width, height } = this.cameras.main;
+    if (!this.dayNightOverlay) {
+      this.dayNightOverlay = this.add.rectangle(
+        width / 2, height / 2, width, height, 0x000022, 0
+      );
+      this.dayNightOverlay.setScrollFactor(0);
+      this.dayNightOverlay.setDepth(9991);
+    }
+    // Map time to darkness: morning=0, dusk=0.15, night=0.35
+    const progress = this.dayTimer / DAY_LENGTH_MS;
+    let alpha = 0;
+    if (progress > 0.7) alpha = (progress - 0.7) / 0.3 * 0.35; // evening → night
+    else if (progress > 0.55) alpha = (progress - 0.55) / 0.15 * 0.08; // late afternoon
+    this.dayNightOverlay.setAlpha(alpha);
   }
 
   private renderForageables() {
