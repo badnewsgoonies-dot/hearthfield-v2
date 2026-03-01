@@ -30,75 +30,67 @@ interface BuildingLayout {
 }
 
 const HOUSE_LAYOUT: BuildingLayout = {
-  width: 14, height: 11, name: 'Home',
+  width: 10, height: 8, name: 'Home',
   floorTint: 0xc4956a, wallTint: 0x8b6914,
   grid: [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,3,0,0,4,4,4,4,0,0,3,0,1],
-    [1,0,0,0,0,4,4,4,4,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,3,0,0,0,0,0,0,0,0,3,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,3,0,0,0,0,3,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,1,1,1,1,2,2,2,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,3,0,4,4,4,0,3,1],
+    [1,0,0,0,4,4,4,0,0,1],
+    [1,3,0,0,0,0,0,0,3,1],
+    [1,0,0,3,0,0,3,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,2,2,1,1,1,1],
   ],
   objects: [
-    { x: 2, y: 2, label: 'Bed', kind: InteractionKind.BED },
-    { x: 11, y: 2, label: 'Kitchen', kind: InteractionKind.KITCHEN },
-    { x: 2, y: 5, label: 'Bookshelf', kind: InteractionKind.CHEST, data: { msg: "Your grandfather's old journals..." } },
-    { x: 11, y: 5, label: 'Fireplace', kind: InteractionKind.CHEST, data: { msg: 'The fire crackles warmly.' } },
-    { x: 4, y: 7, label: 'Table', kind: InteractionKind.CHEST, data: { msg: 'A sturdy wooden table.' } },
-    { x: 9, y: 7, label: 'Plant', kind: InteractionKind.CHEST, data: { msg: 'A cheerful potted plant.' } },
+    { x: 2, y: 1, label: 'Bed', kind: InteractionKind.BED },
+    { x: 8, y: 1, label: 'Kitchen', kind: InteractionKind.KITCHEN },
+    { x: 1, y: 3, label: 'Bookshelf', kind: InteractionKind.CHEST, data: { msg: "Your grandfather's old journals..." } },
+    { x: 8, y: 3, label: 'Fireplace', kind: InteractionKind.CHEST, data: { msg: 'The fire crackles warmly.' } },
+    { x: 3, y: 4, label: 'Table', kind: InteractionKind.CHEST, data: { msg: 'A sturdy wooden table.' } },
+    { x: 6, y: 4, label: 'Plant', kind: InteractionKind.CHEST, data: { msg: 'A cheerful potted plant.' } },
   ],
 };
 
 const COOP_LAYOUT: BuildingLayout = {
-  width: 10, height: 9, name: 'Chicken Coop',
+  width: 8, height: 7, name: 'Chicken Coop',
   floorTint: 0xc4a84a, wallTint: 0x8b4513,
   animalBuilding: 'coop',
   grid: [
-    [1,1,1,1,1,1,1,1,1,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,5,5,5,5,5,5,5,5,1],
-    [1,1,1,1,2,2,1,1,1,1],
+    [1,1,1,1,1,1,1,1],
+    [1,5,5,5,5,5,5,1],
+    [1,5,5,5,5,5,5,1],
+    [1,5,5,5,5,5,5,1],
+    [1,5,5,5,5,5,5,1],
+    [1,5,5,5,5,5,5,1],
+    [1,1,1,2,2,1,1,1],
   ],
   objects: [
     { x: 1, y: 1, label: 'Nesting Box', kind: InteractionKind.CHEST, data: { msg: 'Collect eggs here when chickens are happy.' } },
-    { x: 8, y: 1, label: 'Feed Trough', kind: InteractionKind.CHEST, data: { msg: 'Chickens eat fiber. Keep them fed daily!' } },
-    { x: 8, y: 6, label: 'Buy Chicken', kind: InteractionKind.CHEST, data: { buyAnimal: 'chicken' } },
+    { x: 6, y: 1, label: 'Feed Trough', kind: InteractionKind.CHEST, data: { msg: 'Chickens eat fiber. Keep them fed daily!' } },
+    { x: 6, y: 4, label: 'Buy Chicken', kind: InteractionKind.CHEST, data: { buyAnimal: 'chicken' } },
   ],
 };
 
 const BARN_LAYOUT: BuildingLayout = {
-  width: 12, height: 11, name: 'Barn',
+  width: 9, height: 8, name: 'Barn',
   floorTint: 0x9e8b6e, wallTint: 0x6b3a2a,
   animalBuilding: 'barn',
   grid: [
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,6,6,6,6,6,6,6,6,6,6,1],
-    [1,1,1,1,1,2,2,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,6,6,6,6,6,6,6,1],
+    [1,1,1,1,2,2,1,1,1],
   ],
   objects: [
     { x: 1, y: 1, label: 'Hay Bale', kind: InteractionKind.CHEST, data: { msg: 'Fresh hay for the animals.' } },
-    { x: 10, y: 1, label: 'Feed Trough', kind: InteractionKind.CHEST, data: { msg: 'Cows eat fiber. Keep them fed daily!' } },
-    { x: 1, y: 5, label: 'Milking Stn', kind: InteractionKind.CHEST, data: { msg: "Milk cows here when they're happy." } },
-    { x: 10, y: 6, label: 'Buy Cow', kind: InteractionKind.CHEST, data: { buyAnimal: 'cow' } },
+    { x: 7, y: 1, label: 'Feed Trough', kind: InteractionKind.CHEST, data: { msg: 'Cows eat fiber. Keep them fed daily!' } },
+    { x: 1, y: 4, label: 'Milking Stn', kind: InteractionKind.CHEST, data: { msg: "Milk cows here when they're happy." } },
+    { x: 7, y: 4, label: 'Buy Cow', kind: InteractionKind.CHEST, data: { buyAnimal: 'cow' } },
   ],
 };
 
@@ -138,7 +130,7 @@ export class InteriorScene extends Phaser.Scene {
 
     // Dynamic tile size — fill viewport with margin for title + prompt
     const marginTop = 28, marginBot = 24, marginSide = 16;
-    this.T = Math.floor(Math.min((camW - marginSide * 2) / gw, (camH - marginTop - marginBot) / gh));
+    this.T = Math.min(75, Math.floor(Math.min((camW - marginSide * 2) / gw, (camH - marginTop - marginBot) / gh)));
     const T = this.T;
     this.offX = Math.floor((camW - gw * T) / 2);
     this.offY = marginTop + Math.floor(((camH - marginTop - marginBot) - gh * T) / 2);
@@ -228,7 +220,7 @@ export class InteriorScene extends Phaser.Scene {
     // Player — spawn one row above door
     const firstExit = [...this.exitTiles][0];
     const [doorX, doorY] = firstExit.split(',').map(Number);
-    const playerScale = T / 16; // sprite is 16x16; scale to fill one tile
+    const playerScale = (T / 16) * 0.75; // sprite is 16x16; scale to ~75% of tile
     this.player = this.add.sprite(
       this.offX + doorX * T + T / 2,
       this.offY + (doorY - 1) * T + T / 2,
