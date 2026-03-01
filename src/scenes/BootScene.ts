@@ -55,6 +55,7 @@ export class BootScene extends Phaser.Scene {
     this.genUIIcons(T);
     this.genTools(T);
     this.genAnimals(T);
+    this.genInterior(T);
     this.genMonsters(T);
     this.genHouseComposite(T);
     this.genTreeComposite(T);
@@ -606,17 +607,108 @@ export class BootScene extends Phaser.Scene {
 
   private genAnimals(T: number) {
     const g = this.make.graphics();
-    const a = [{b:0xFFFFFF,d:0xFFCCCC},{b:0x8B4513,d:0xFFCC88},{b:0xF5F5DC,d:0xCCCCBB},{b:0xFF8C00,d:0xFFAA44},{b:0x888888,d:0xAAAAAA}];
     for (let i=0; i<5; i++) {
       const ox=i*T;
-      g.fillStyle(a[i].b); g.fillRect(ox+3,6,10,6); g.fillRect(ox+4,5,8,8);
-      g.fillStyle(a[i].d); g.fillRect(ox+10,3,5,4);
-      g.fillStyle(0x222222); g.fillRect(ox+12,4,1,1);
-      g.fillStyle(0x8B6914); g.fillRect(ox+5,12,2,4); g.fillRect(ox+9,12,2,4);
+      if (i === 0) { // chicken
+        g.fillStyle(0xf7f7f2); g.fillCircle(ox + 8, 8, 5);
+        g.fillStyle(0xffffff); g.fillCircle(ox + 7, 7, 3);
+        g.fillStyle(0xd24040); g.fillRect(ox + 6, 2, 1, 2); g.fillRect(ox + 7, 1, 1, 3); g.fillRect(ox + 8, 2, 1, 2);
+        g.fillStyle(0xe6922b); g.fillRect(ox + 12, 7, 2, 2);
+        g.fillStyle(0x2a2522); g.fillRect(ox + 10, 6, 1, 1);
+        g.fillStyle(0xd6b83f); g.fillRect(ox + 6, 13, 1, 3); g.fillRect(ox + 9, 13, 1, 3);
+      } else if (i === 1) { // cow
+        g.fillStyle(0xeee8dc); g.fillRect(ox + 2, 6, 11, 6);
+        g.fillStyle(0x8b5a3a); g.fillRect(ox + 4, 7, 3, 2); g.fillRect(ox + 8, 9, 3, 2); g.fillRect(ox + 11, 6, 2, 2);
+        g.fillStyle(0xddd4c6); g.fillRect(ox + 12, 6, 3, 4);
+        g.fillStyle(0x7b5f42); g.fillRect(ox + 12, 5, 1, 1); g.fillRect(ox + 14, 5, 1, 1);
+        g.fillStyle(0x4a3327); g.fillRect(ox + 13, 9, 2, 2);
+        g.fillStyle(0x3c2b22); g.fillRect(ox + 13, 7, 1, 1);
+        g.fillStyle(0x5a4330); g.fillRect(ox + 4, 12, 1, 4); g.fillRect(ox + 7, 12, 1, 4); g.fillRect(ox + 10, 12, 1, 4); g.fillRect(ox + 13, 12, 1, 4);
+      } else if (i === 2) { // sheep
+        g.fillStyle(0xf7f6f0); g.fillCircle(ox + 7, 8, 4); g.fillCircle(ox + 10, 8, 4); g.fillCircle(ox + 8, 6, 3);
+        g.fillStyle(0x3a3636); g.fillRect(ox + 11, 7, 4, 4);
+        g.fillStyle(0x262222); g.fillRect(ox + 13, 8, 1, 1);
+        g.fillStyle(0x4a4343); g.fillRect(ox + 5, 12, 1, 4); g.fillRect(ox + 8, 12, 1, 4); g.fillRect(ox + 11, 12, 1, 4);
+      } else if (i === 3) { // pig
+        g.fillStyle(0xf2a5ba); g.fillRect(ox + 3, 6, 10, 6); g.fillRect(ox + 4, 5, 8, 8);
+        g.fillStyle(0xe58aa3); g.fillRect(ox + 12, 7, 3, 3);
+        g.fillStyle(0xcd6f8d); g.fillRect(ox + 13, 8, 1, 1);
+        g.fillStyle(0xe79cb5); g.fillRect(ox + 4, 4, 2, 2); g.fillRect(ox + 10, 4, 2, 2);
+        g.fillStyle(0x3a2a2f); g.fillRect(ox + 11, 7, 1, 1);
+        g.fillStyle(0xd984a0); g.fillRect(ox + 2, 10, 1, 1); g.fillRect(ox + 1, 9, 1, 1); g.fillRect(ox + 2, 8, 1, 1); // curly tail
+        g.fillStyle(0x9d6478); g.fillRect(ox + 5, 13, 1, 3); g.fillRect(ox + 9, 13, 1, 3);
+      } else { // goat
+        g.fillStyle(0xa9a9ad); g.fillRect(ox + 3, 6, 9, 6); g.fillRect(ox + 4, 5, 7, 8);
+        g.fillStyle(0x8d8d92); g.fillRect(ox + 10, 6, 4, 4);
+        g.fillStyle(0x706f76); g.fillRect(ox + 11, 5, 1, 1); g.fillRect(ox + 13, 5, 1, 1); // horns
+        g.fillStyle(0x3b3636); g.fillRect(ox + 12, 7, 1, 1); // eye
+        g.fillStyle(0x7c7b80); g.fillRect(ox + 5, 12, 1, 4); g.fillRect(ox + 8, 12, 1, 4); g.fillRect(ox + 11, 12, 1, 4);
+        g.fillStyle(0x67666b); g.fillRect(ox + 10, 10, 1, 2); // beard
+      }
     }
     g.generateTexture('animals', T*5, T); g.destroy();
     const aTex = this.textures.get('animals');
     for (let i = 0; i < 5; i++) aTex.add(i, 0, i * T, 0, T, T);
+  }
+
+  private genInterior(T: number) {
+    const g = this.make.graphics();
+    for (let i = 0; i < 8; i++) {
+      const ox = i * T;
+      if (i === 0) { // wooden floor
+        g.fillStyle(0x8d5d37); g.fillRect(ox, 0, T, T);
+        g.fillStyle(0xa36f45); g.fillRect(ox, 0, T, 3); g.fillRect(ox, 8, T, 3);
+        g.fillStyle(0x6f4628); g.fillRect(ox, 4, T, 1); g.fillRect(ox, 12, T, 1);
+        g.fillStyle(0x7b5030); g.fillRect(ox + 5, 0, 1, T); g.fillRect(ox + 11, 0, 1, T);
+      } else if (i === 1) { // stone wall
+        g.fillStyle(0x8a8f98); g.fillRect(ox, 0, T, T);
+        g.fillStyle(0x757b84); g.fillRect(ox, 5, T, 1); g.fillRect(ox, 11, T, 1);
+        g.fillStyle(0xb1b5bc); g.fillRect(ox + 3, 0, 1, 6); g.fillRect(ox + 10, 0, 1, 6); g.fillRect(ox + 6, 6, 1, 6); g.fillRect(ox + 13, 6, 1, 6);
+        g.fillStyle(0x6b7078); g.fillRect(ox + 1, 2, 2, 1); g.fillRect(ox + 8, 8, 2, 1);
+      } else if (i === 2) { // bed
+        g.fillStyle(0x6e4c33); g.fillRect(ox + 1, 2, 14, 12);
+        g.fillStyle(0xf2f4f8); g.fillRect(ox + 2, 3, 5, 4);
+        g.fillStyle(0x4a79c9); g.fillRect(ox + 7, 3, 7, 10);
+        g.fillStyle(0x6b98df); g.fillRect(ox + 8, 4, 5, 3);
+        g.fillStyle(0x4f3725); g.fillRect(ox + 2, 13, 12, 1);
+      } else if (i === 3) { // table
+        g.fillStyle(0x8f5f39); g.fillRect(ox + 2, 4, 12, 4);
+        g.fillStyle(0x71482c); g.fillRect(ox + 3, 8, 2, 7); g.fillRect(ox + 11, 8, 2, 7);
+        g.fillStyle(0xa57446); g.fillRect(ox + 3, 4, 10, 1);
+      } else if (i === 4) { // bookshelf
+        g.fillStyle(0x6f452a); g.fillRect(ox + 2, 1, 12, 14);
+        g.fillStyle(0x4f2f1d); g.fillRect(ox + 3, 5, 10, 1); g.fillRect(ox + 3, 9, 10, 1);
+        g.fillStyle(0xca5a4e); g.fillRect(ox + 3, 2, 2, 3);
+        g.fillStyle(0x4e84ca); g.fillRect(ox + 5, 2, 2, 3);
+        g.fillStyle(0xd8b44c); g.fillRect(ox + 7, 2, 2, 3);
+        g.fillStyle(0x7eaa52); g.fillRect(ox + 9, 2, 3, 3);
+        g.fillStyle(0xb16ccf); g.fillRect(ox + 4, 6, 2, 3);
+        g.fillStyle(0x58b1b1); g.fillRect(ox + 6, 6, 3, 3);
+        g.fillStyle(0xd27155); g.fillRect(ox + 9, 6, 2, 3);
+        g.fillStyle(0xc2a15f); g.fillRect(ox + 3, 10, 2, 4);
+        g.fillStyle(0x7c8fc8); g.fillRect(ox + 6, 10, 2, 4);
+        g.fillStyle(0xc25f6a); g.fillRect(ox + 9, 10, 3, 4);
+      } else if (i === 5) { // fireplace
+        g.fillStyle(0x78706a); g.fillRect(ox + 2, 1, 12, 14);
+        g.fillStyle(0x4b433e); g.fillRect(ox + 4, 5, 8, 8);
+        g.fillStyle(0xb13b2f); g.fillRect(ox + 6, 9, 4, 3);
+        g.fillStyle(0xe07235); g.fillRect(ox + 5, 8, 6, 3);
+        g.fillStyle(0xf6b94b); g.fillRect(ox + 7, 7, 2, 2);
+      } else if (i === 6) { // hay/straw
+        g.fillStyle(0xd8bf56); g.fillRect(ox, 0, T, T);
+        g.fillStyle(0xf0dc78); g.fillRect(ox + 1, 1, 4, 1); g.fillRect(ox + 8, 2, 5, 1); g.fillRect(ox + 5, 6, 4, 1); g.fillRect(ox + 10, 10, 4, 1);
+        g.fillStyle(0xb99f41); g.fillRect(ox + 3, 4, 6, 1); g.fillRect(ox + 1, 9, 5, 1); g.fillRect(ox + 7, 13, 6, 1);
+        g.fillStyle(0xceb24d); g.fillRect(ox + 12, 4, 2, 1); g.fillRect(ox + 2, 12, 3, 1);
+      } else { // door mat
+        g.fillStyle(0xb79b72); g.fillRect(ox + 1, 4, 14, 8);
+        g.fillStyle(0x8e6f47); g.fillRect(ox + 2, 5, 12, 6);
+        g.fillStyle(0x725536); g.fillRect(ox + 3, 6, 10, 1); g.fillRect(ox + 3, 9, 10, 1);
+        g.fillStyle(0xc7b28e); g.fillRect(ox + 1, 4, 14, 1);
+      }
+    }
+    g.generateTexture('interior', T*8, T); g.destroy();
+    const inTex = this.textures.get('interior');
+    for (let i = 0; i < 8; i++) inTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genMonsters(T: number) {

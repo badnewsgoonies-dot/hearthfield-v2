@@ -288,6 +288,7 @@ export class InteriorScene extends Phaser.Scene {
   }
   
   private placeAnimals(offsetX: number, offsetY: number) {
+    if (!this.playScene.animalSystem) return;
     const animalState = this.playScene.animalSystem.getState();
     const buildingType = this.layout.animalBuilding!;
     const animals = animalState.animals.filter(a => {

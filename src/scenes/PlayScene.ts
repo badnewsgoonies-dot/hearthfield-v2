@@ -1480,6 +1480,7 @@ export class PlayScene extends Phaser.Scene {
     }
     this.farmAnimalSprites = [];
 
+    if (!this.animalSystem) return;
     const animals = this.animalSystem.getState().animals;
     if (animals.length === 0) return;
 
