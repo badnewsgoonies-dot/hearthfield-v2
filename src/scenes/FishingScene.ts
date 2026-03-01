@@ -72,6 +72,8 @@ export class FishingScene extends Phaser.Scene {
   private fishZoneTop = 0;
   private fishZoneHeight = 80;
   private fishZoneVelocity = 130;
+  private fishMovePattern: 'steady' | 'normal' | 'erratic' = 'normal';
+  private fishErraticChangeTimer = 0;
 
   private cursorCenterY = 0;
   private cursorVelocity = 0;
@@ -231,6 +233,7 @@ export class FishingScene extends Phaser.Scene {
 
     this.messageText.setText(`Cast ${this.castDistance}m`);
     this.hintText.setText('Waiting for a bite...');
+    this.showCastDistanceIndicator();
 
     this.castBarBg.setVisible(false);
     this.castBarFill.setVisible(false);
@@ -332,6 +335,8 @@ export class FishingScene extends Phaser.Scene {
     const difficulty = this.targetFish?.difficulty ?? Difficulty.MEDIUM;
     this.fishZoneHeight = this.getFishZoneHeight(difficulty);
     this.fishZoneVelocity = this.getFishZoneSpeed(difficulty);
+    this.fishMovePattern = this.getFishMovePattern();
+    this.fishErraticChangeTimer = 0;
 
     this.fishZoneTop = (this.barHeight - this.fishZoneHeight) * 0.5;
     this.cursorCenterY = this.barHeight * 0.5;
@@ -368,6 +373,7 @@ export class FishingScene extends Phaser.Scene {
       this.cursorVelocity *= 0.2;
     }
 
+    this.updateFishZoneMotion(dt);
     this.fishZoneTop += this.fishZoneVelocity * dt;
     if (this.fishZoneTop <= 0) {
       this.fishZoneTop = 0;
@@ -429,6 +435,7 @@ export class FishingScene extends Phaser.Scene {
       `${stars}  ${fish.sellPrice}g`,
       '#57e6a1',
     );
+    this.showCatchText(fish.name, quality);
 
     this.createCelebrationParticles();
     this.phase = 'resolved';
@@ -454,6 +461,7 @@ export class FishingScene extends Phaser.Scene {
     });
 
     this.showResultCard('No catch', 'Try a longer cast or better timing', '#ff8b8b');
+    this.showEscapeText();
 
     this.time.delayedCall(1200, () => {
       this.closeAndReturn();
@@ -543,13 +551,23 @@ export class FishingScene extends Phaser.Scene {
   }
 
   private getFishZoneSpeed(difficulty: Difficulty): number {
-    switch (difficulty) {
-      case Difficulty.EASY:
-        return Phaser.Math.FloatBetween(88, 118);
-      case Difficulty.MEDIUM:
-        return Phaser.Math.FloatBetween(145, 185);
-      case Difficulty.HARD:
-        return Phaser.Math.FloatBetween(220, 280);
+    const rarity = this.getTargetFishRarity();
+    switch (rarity) {
+      case 'common':
+        return Phaser.Math.FloatBetween(80, 110);
+      case 'uncommon':
+        return Phaser.Math.FloatBetween(130, 175);
+      case 'rare':
+        return Phaser.Math.FloatBetween(220, 290);
+      default:
+        switch (difficulty) {
+          case Difficulty.EASY:
+            return Phaser.Math.FloatBetween(88, 118);
+          case Difficulty.MEDIUM:
+            return Phaser.Math.FloatBetween(145, 185);
+          case Difficulty.HARD:
+            return Phaser.Math.FloatBetween(220, 280);
+        }
     }
   }
 
@@ -583,6 +601,102 @@ export class FishingScene extends Phaser.Scene {
         return '★★';
       case Difficulty.HARD:
         return '★★★';
+    }
+  }
+
+  private getTargetFishRarity(): 'common' | 'uncommon' | 'rare' | 'unknown' {
+    const fishId = this.targetFish?.id ?? '';
+    if (fishId === 'sardine' || fishId === 'trout' || fishId === 'bass') {
+      return 'common';
+    }
+    if (fishId === 'salmon' || fishId === 'catfish') {
+      return 'uncommon';
+    }
+    if (fishId === 'tuna' || fishId === 'legendary_fish') {
+      return 'rare';
+    }
+    return 'unknown';
+  }
+
+  private getFishMovePattern(): 'steady' | 'normal' | 'erratic' {
+    const rarity = this.getTargetFishRarity();
+    if (rarity === 'common') {
+      return 'steady';
+    }
+    if (rarity === 'rare') {
+      return 'erratic';
+    }
+    return 'normal';
+  }
+
+  private updateFishZoneMotion(dt: number): void {
+    if (this.fishMovePattern !== 'erratic') {
+      return;
+    }
+
+    this.fishErraticChangeTimer -= dt;
+    if (this.fishErraticChangeTimer > 0) {
+      return;
+    }
+
+    const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+    const speed = Phaser.Math.FloatBetween(230, 320);
+    this.fishZoneVelocity = direction * speed;
+    this.fishErraticChangeTimer = Phaser.Math.FloatBetween(0.16, 0.42);
+  }
+
+  private showFloatingCenterText(
+    text: string,
+    color: string,
+    sizePx: number,
+    durationMs: number,
+    yOffset = -6,
+  ): void {
+    const camera = this.cameras.main;
+    const popup = this.add.text(camera.centerX, camera.centerY + yOffset, text, {
+      fontFamily: 'monospace',
+      fontSize: `${sizePx}px`,
+      fontStyle: 'bold',
+      color,
+      stroke: '#08131f',
+      strokeThickness: 6,
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(2500);
+
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 20,
+      alpha: 0,
+      duration: durationMs,
+      ease: 'Sine.Out',
+      onComplete: () => popup.destroy(),
+    });
+  }
+
+  private showCatchText(fishName: string, quality: Quality): void {
+    const qualityLabel = this.getQualityLabel(quality);
+    const qualitySuffix = qualityLabel ? ` (${qualityLabel})` : '';
+    this.showFloatingCenterText(`Caught: ${fishName}${qualitySuffix}!`, '#ffd447', 36, 2000, -16);
+  }
+
+  private showEscapeText(): void {
+    this.showFloatingCenterText('The fish got away...', '#ff6464', 34, 2000);
+  }
+
+  private showCastDistanceIndicator(): void {
+    const label = this.castPowerRatio >= 0.7 ? 'Far' : this.castPowerRatio >= 0.4 ? 'Medium' : 'Near';
+    this.showFloatingCenterText(`Cast: ${label}`, '#9cd7ff', 30, 1200, -28);
+  }
+
+  private getQualityLabel(quality: Quality): string {
+    switch (quality) {
+      case Quality.SILVER:
+        return 'Silver';
+      case Quality.GOLD:
+        return 'Gold';
+      case Quality.NORMAL:
+      default:
+        return '';
     }
   }
 

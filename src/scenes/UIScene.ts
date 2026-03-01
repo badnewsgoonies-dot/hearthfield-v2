@@ -78,6 +78,7 @@ export class UIScene extends Phaser.Scene {
   private craftingRows: Phaser.GameObjects.GameObject[] = [];
   private craftingCookingMode = false;
   private isCraftingOpen = false;
+  private questTrackerText!: Phaser.GameObjects.Text;
 
   private inventoryPanel!: InventoryPanel;
   private shopPanel!: ShopPanel;
@@ -115,6 +116,7 @@ export class UIScene extends Phaser.Scene {
     this.refreshGold();
     this.refreshDay();
     this.refreshTime();
+    this.refreshQuestTracker();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.inventoryPanel.close();
@@ -218,6 +220,13 @@ export class UIScene extends Phaser.Scene {
 
     this.staminaBarBg = this.add.rectangle(10, 32, 120, 8, 0x333333).setOrigin(0, 0.5).setDepth(111);
     this.staminaBar = this.add.rectangle(10, 32, 120, 8, 0x44cc44).setOrigin(0, 0.5).setDepth(112);
+    
+    // Quest tracker — top right corner below time
+    this.questTrackerText = this.add.text(w - 10, 38, '', {
+      fontSize: '11px', color: '#ccddff', fontFamily: 'monospace',
+      backgroundColor: '#00000088', padding: { x: 4, y: 2 },
+      wordWrap: { width: 200 },
+    }).setOrigin(1, 0).setDepth(111);
   }
 
   private createToast(): void {
@@ -319,7 +328,7 @@ export class UIScene extends Phaser.Scene {
       if (this.isCraftingOpen) this.populateCraftingRows();
     });
     ps.events.on(Events.GOLD_CHANGE, () => this.refreshGold());
-    ps.events.on(Events.TIME_TICK, () => this.refreshTime());
+    ps.events.on(Events.TIME_TICK, () => { this.refreshTime(); this.refreshQuestTracker(); });
     ps.events.on(Events.DAY_START, () => this.refreshDay());
 
     ps.events.on(Events.TOAST, (data: ToastData) => {
@@ -413,6 +422,21 @@ export class UIScene extends Phaser.Scene {
     const ampm = isPm ? 'PM' : 'AM';
 
     this.timeText.setText(`${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`);
+  }
+
+  private refreshQuestTracker(): void {
+    if (!this.playScene?.questSystem) { this.questTrackerText.setText(''); return; }
+    const active = this.playScene.questSystem.getActiveQuests();
+    if (active.length === 0) {
+      this.questTrackerText.setText('📋 Visit Quest Board');
+      return;
+    }
+    const lines = active.slice(0, 3).map(q => {
+      const pct = Math.floor((q.progress / q.def.targetQty) * 100);
+      const done = q.completed ? '✓' : `${q.progress}/${q.def.targetQty}`;
+      return `${q.def.name}: ${done}`;
+    });
+    this.questTrackerText.setText(lines.join('\n'));
   }
 
   private showToast(message: string, duration: number, color = '#ffffff'): void {

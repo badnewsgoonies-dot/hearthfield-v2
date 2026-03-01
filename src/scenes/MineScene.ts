@@ -57,7 +57,7 @@ export class MineScene extends Phaser.Scene {
   private healthBarFill!: Phaser.GameObjects.Rectangle;
   private hearts: Phaser.GameObjects.Rectangle[] = [];
 
-  private foundItems = new Map<string, number>();
+  private foundItems: { itemId: string; qty: number }[] = [];
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: {
@@ -162,7 +162,7 @@ export class MineScene extends Phaser.Scene {
     this.playerY = this.exitY;
     this.grid[this.exitY][this.exitX] = 'exit';
 
-    const rockCount = Phaser.Math.Clamp(18 + Math.floor(floor * 1.2), 18, 46);
+    const rockCount = Phaser.Math.Clamp(5 + floor, 5, 15);
     for (let i = 0; i < rockCount; i += 1) {
       const pos = this.pickFreeTile();
       if (!pos) break;
@@ -180,15 +180,13 @@ export class MineScene extends Phaser.Scene {
       this.grid[this.ladderY][this.ladderX] = 'ladder';
     }
 
-    const monsterCount = Phaser.Math.Clamp(2 + Math.floor(floor / 2), 2, 12);
+    const monsterCount = Phaser.Math.Clamp(1 + Math.floor(floor / 5), 1, 5);
     for (let i = 0; i < monsterCount; i += 1) {
       const pos = this.pickFreeTile();
       if (!pos) break;
       const type: MonsterType = Math.random() < 0.65 ? 'slime' : 'bat';
-      const baseHp = type === 'slime' ? 10 : 8;
-      const baseAtk = type === 'slime' ? 3 : 4;
-      const maxHp = baseHp + Math.floor(floor * 0.8);
-      const attack = baseAtk + Math.floor(floor / 5);
+      const maxHp = type === 'slime' ? 15 + floor * 3 : 10 + floor * 2;
+      const attack = type === 'slime' ? 5 + floor : 8 + floor * 2;
 
       const body = this.add.rectangle(0, 0, MineScene.TILE * 0.55, MineScene.TILE * 0.55, type === 'slime' ? 0x6cbc4f : 0x8e6ccf);
       const hpBg = this.add.rectangle(0, 0, MineScene.TILE * 0.7, 5, 0x1b1b1b).setOrigin(0.5, 0.5);
@@ -341,6 +339,7 @@ export class MineScene extends Phaser.Scene {
 
     const drop = this.rollRockDrop(this.floor);
     this.addDrop(drop, 1);
+    this.showLootFlash(x, y, `+${drop}!`, '#ffe18a');
   }
 
   private killMonster(monster: MineMonster) {
@@ -357,26 +356,10 @@ export class MineScene extends Phaser.Scene {
   }
 
   private rollRockDrop(floor: number): string {
-    const r = Math.random();
-    if (floor >= 40) {
-      if (r < 0.2) return 'gold_ore';
-      if (r < 0.55) return 'iron_ore';
-      if (r < 0.85) return 'copper_ore';
-      return 'stone';
-    }
-    if (floor >= 20) {
-      if (r < 0.08) return 'gold_ore';
-      if (r < 0.4) return 'iron_ore';
-      if (r < 0.75) return 'copper_ore';
-      return 'stone';
-    }
-    if (floor >= 10) {
-      if (r < 0.2) return 'iron_ore';
-      if (r < 0.55) return 'copper_ore';
-      return 'stone';
-    }
-    if (r < 0.25) return 'copper_ore';
-    return 'stone';
+    const roll = Math.random();
+    if (roll < 0.6) return 'stone';
+    if (roll < 0.9) return this.randomOreForFloor(floor);
+    return this.randomGemForFloor(floor);
   }
 
   private rollMonsterDrop(floor: number): string {
@@ -390,8 +373,12 @@ export class MineScene extends Phaser.Scene {
   }
 
   private addDrop(itemId: string, qty: number) {
-    this.playScene.addToInventory(itemId, qty, Quality.NORMAL);
-    this.foundItems.set(itemId, (this.foundItems.get(itemId) ?? 0) + qty);
+    const existing = this.foundItems.find((item) => item.itemId === itemId);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      this.foundItems.push({ itemId, qty });
+    }
 
     const item = ITEMS.find((it) => it.id === itemId);
     this.playScene.events.emit(Events.TOAST, {
@@ -401,15 +388,21 @@ export class MineScene extends Phaser.Scene {
   }
 
   private advanceFloor() {
-    this.floor += 1;
+    const clearedFloor = this.floor;
     this.playScene.events.emit(Events.TOAST, {
-      message: `Descending to floor ${this.floor}...`,
-      color: '#ccccff',
+      message: `Floor ${clearedFloor} cleared! Going deeper...`,
+      color: '#ffe18a',
     });
+    this.floor += 1;
     this.generateFloor(this.floor);
   }
 
   private leaveMine() {
+    for (const item of this.foundItems) {
+      this.playScene.addToInventory(item.itemId, item.qty);
+    }
+    this.foundItems = [];
+
     this.playScene.player.currentMap = MapId.FARM;
     this.playScene.mine.currentFloor = this.floor;
 
@@ -428,14 +421,11 @@ export class MineScene extends Phaser.Scene {
     this.renderHearts(hp, maxHp);
     this.staminaText.setText(`Stamina: ${Math.floor(this.playScene.player.stamina)}/${this.playScene.player.maxStamina}`);
 
-    const foundLines = Array.from(this.foundItems.entries())
-      .slice(0, 6)
-      .map(([itemId, qty]) => {
-        const item = ITEMS.find((it) => it.id === itemId);
-        return `${item?.name ?? itemId} x${qty}`;
-      });
+    const foundText = this.foundItems
+      .map((item) => `${item.itemId} x${item.qty}`)
+      .join(', ');
 
-    this.foundText.setText(`Found:\n${foundLines.length ? foundLines.join('\n') : '(nothing yet)'}`);
+    this.foundText.setText(`Found: ${foundText || '(nothing yet)'}`);
   }
 
   private renderHearts(hp: number, maxHp: number) {
@@ -502,5 +492,44 @@ export class MineScene extends Phaser.Scene {
 
   private inBounds(x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < MineScene.GRID_W && y < MineScene.GRID_H;
+  }
+
+  private randomOreForFloor(floor: number): string {
+    const options = ['copper_ore'];
+    if (floor >= 20) options.push('iron_ore');
+    if (floor >= 40) options.push('gold_ore');
+    return Phaser.Utils.Array.GetRandom(options);
+  }
+
+  private randomGemForFloor(floor: number): string {
+    const options: string[] = [];
+    if (floor >= 10) options.push('amethyst');
+    if (floor >= 20) options.push('aquamarine');
+    if (floor >= 30) options.push('emerald');
+    if (floor >= 40) options.push('ruby');
+    if (floor >= 50) options.push('diamond');
+    return options.length > 0 ? Phaser.Utils.Array.GetRandom(options) : 'stone';
+  }
+
+  private showLootFlash(tileX: number, tileY: number, message: string, color: string) {
+    const cx = this.worldOffsetX + tileX * MineScene.TILE + MineScene.TILE / 2;
+    const cy = this.worldOffsetY + tileY * MineScene.TILE + MineScene.TILE / 2;
+    const flash = this.add.text(cx, cy, message, {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color,
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0.5, 0.5);
+    this.entityLayer.add(flash);
+
+    this.tweens.add({
+      targets: flash,
+      y: cy - 18,
+      alpha: 0,
+      duration: 500,
+      ease: 'Sine.easeOut',
+      onComplete: () => flash.destroy(),
+    });
   }
 }

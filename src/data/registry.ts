@@ -199,11 +199,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['coal', 'stone'],
     defaultMap: MapId.TOWN, portraitIndex: 0, spriteIndex: 0,
     dialoguePool: {
-      '0': ['Oh, hello. I don\'t think we\'ve met.', 'New around here?', 'If spring planting is going well, stop by with fresh vegetables.'],
-      '1': ['Nice to see you again!', 'How\'s the farm coming along?', 'Bring me a gift sometime and I\'ll share a kitchen trick.'],
-      '2': ['I always enjoy our chats.', 'Want to see my garden sometime?', 'A warm meal before mining helps, especially past floor 20.'],
-      '3': ['You\'re so sweet to visit me.', 'I made you something!', 'Try combining milk and pumpkin in fall for a comforting soup.'],
-      '4': ['I can\'t imagine life without you.', 'Every day with you is an adventure.', 'I wonder what dishes people cook beyond the mountains...'],
+      '0': ['Oh, hello. I don\'t think we\'ve met.', 'New around here?', 'If spring planting is going well, stop by with fresh vegetables.', 'Summer festivals are my favorite excuse to bake extra pies.', 'Your farm is growing nicely; I saw your crops from the road.', 'Owen says your tools are improving, and it shows in your harvest.'],
+      '1': ['Nice to see you again!', 'How\'s the farm coming along?', 'Bring me a gift sometime and I\'ll share a kitchen trick.', 'Have you tried the mine yet? I always pack stew before I go near it.', 'The crafting bench has new recipes, and one of them pairs perfectly with garden herbs.', 'Lily brought me a sketch of your farm and it looked lovely.'],
+      '2': ['I always enjoy our chats.', 'Want to see my garden sometime?', 'A warm meal before mining helps, especially past floor 20.', 'Winter is hard but cozy when the kitchen stays warm all day.', 'Marcus pretends he is fine, but he always takes an extra lunch for the mine.', 'Your farmhouse feels so welcoming, like supper is always about to start.'],
+      '3': ['You\'re so sweet to visit me.', 'I made you something!', 'Try combining milk and pumpkin in fall for a comforting soup.', 'Sage says your farm has kind soil, and I think she\'s right.', 'I stocked extra preserves so you have food ready for stormy summer days.', 'When the evenings turn cold, I like mending by the fire and thinking of you.'],
+      '4': ['I can\'t imagine life without you.', 'Every day with you is an adventure.', 'I wonder what dishes people cook beyond the mountains...', 'Let\'s host a winter supper at our farmhouse and invite everyone.', 'Your farm, your kitchen, your heart... it all feels like home to me.', 'If you come in late from the mine, I\'ll keep soup warm for you.'],
     }
   },
   {
@@ -214,11 +214,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['wild_berries', 'fiber'],
     defaultMap: MapId.MINE, portraitIndex: 1, spriteIndex: 1,
     dialoguePool: {
-      '0': ['Watch your step in the mines.', 'Hmph.', 'The mine gets dangerous past floor 20, so pack food.'],
-      '1': ['You handle yourself well down there.', 'Need any ore?', 'Copper veins are common early, but iron starts showing deeper.'],
-      '2': ['I respect your work ethic.', 'Here, found this while digging.', 'Spring rains make the ladders slick. Keep your boots steady.'],
-      '3': ['You\'re tougher than you look.', 'I saved the best vein for you.', 'Bring me a gift sometime and I might mark rich spots for you.'],
-      '4': ['You complete me... like a full ore deposit.', 'Mining with you is the best.', 'Sometimes I wonder what waits beneath the deepest stone.'],
+      '0': ['Watch your step in the mines.', 'Hmph.', 'The mine gets dangerous past floor 20, so pack food.', 'Have you tried the mine yet, or are you still hugging the sunlight?', 'Winter makes the lower shafts bite colder than steel.', 'Your farm fences look solid. Good. Keeps trouble out.'],
+      '1': ['You handle yourself well down there.', 'Need any ore?', 'Copper veins are common early, but iron starts showing deeper.', 'Owen finally forged me a hammer that doesn\'t ring my ears off.', 'If your pick keeps bouncing, upgrade it at the smith and save yourself time.', 'Summer heat above ground is bad enough; down here it just turns to steam.'],
+      '2': ['I respect your work ethic.', 'Here, found this while digging.', 'Spring rains make the ladders slick. Keep your boots steady.', 'I passed your farm this morning. Even your stone piles are neat.', 'Sage warned me about a restless spot in the mine. She was right.', 'The crafting bench has new recipes, and a couple are actually useful underground.'],
+      '3': ['You\'re tougher than you look.', 'I saved the best vein for you.', 'Bring me a gift sometime and I might mark rich spots for you.', 'Lily asked me for sparkling stones for paint. Didn\'t know rocks could be art.', 'Fall is my best season for mining; dry air, steady footing.', 'When you are in the mine, I sleep lighter. Get back safe.'],
+      '4': ['You complete me... like a full ore deposit.', 'Mining with you is the best.', 'Sometimes I wonder what waits beneath the deepest stone.', 'Your farm feels quieter when we return from a long shift together.', 'On winter nights, we can sit by the furnace and listen to the fire settle.', 'Elena says I smile more now. Don\'t spread that around.'],
     }
   },
   {
@@ -229,11 +229,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['iron_ore', 'coal'],
     defaultMap: MapId.BEACH, portraitIndex: 2, spriteIndex: 2,
     dialoguePool: {
-      '0': ['Oh! The waves are beautiful today.', 'Are you new here?', 'Spring planting going well? Wild flowers bloom all over the forest paths.'],
-      '1': ['It\'s nice having someone to talk to!', 'Do you like the beach?', 'Bring me a gift sometime; I love sweet things from nature.'],
-      '2': ['I painted something for you!', 'Let\'s watch the sunset!', 'Foraging in the morning usually finds the freshest berries and flowers.'],
-      '3': ['You make every day brighter.', 'I dream about you sometimes.', 'Each season has its own scent, and I wait for them all year.'],
-      '4': ['I love you with all my heart.', 'Let\'s grow old by the sea.', 'I wonder what kinds of flowers bloom beyond the mountains...'],
+      '0': ['Oh! The waves are beautiful today.', 'Are you new here?', 'Spring planting going well? Wild flowers bloom all over the forest paths.', 'I love summer festivals; the lanterns look like floating stars.', 'I saw your crops from the road and they looked like a patchwork painting.', 'Sage is always talking to trees, and honestly, sometimes I think they answer her.'],
+      '1': ['It\'s nice having someone to talk to!', 'Do you like the beach?', 'Bring me a gift sometime; I love sweet things from nature.', 'The crafting bench has new recipes, and I want to decorate your farmhouse with them.', 'Owen made me a tiny metal frame for my seashell sketches.', 'Have you tried the mine yet? The crystals there glow like moonlight.'],
+      '2': ['I painted something for you!', 'Let\'s watch the sunset!', 'Foraging in the morning usually finds the freshest berries and flowers.', 'Fall winds make the grass dance like brushstrokes.', 'Your farm has become my favorite place to find color palettes.', 'Elena says my paintings make her kitchen feel warmer, which is the sweetest thing.'],
+      '3': ['You make every day brighter.', 'I dream about you sometimes.', 'Each season has its own scent, and I wait for them all year.', 'When winter comes, I paint by the window and listen for your footsteps.', 'Marcus gave me a stone with silver flecks; it inspired a whole series.', 'Rainy mornings on your farm feel like living inside a watercolor.'],
+      '4': ['I love you with all my heart.', 'Let\'s grow old by the sea.', 'I wonder what kinds of flowers bloom beyond the mountains...', 'I want to paint every season of our life on your farm.', 'If you hold me close on winter nights, even storms sound like music.', 'Owen says I\'m impractical, but even he admits we make a good team.'],
     }
   },
   {
@@ -244,11 +244,11 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['parsnip'],
     defaultMap: MapId.TOWN, portraitIndex: 3, spriteIndex: 3,
     dialoguePool: {
-      '0': ['Welcome to the blacksmith shop.', 'Need something upgraded?', 'Low-grade ore bends. Good ore sings when it hits the anvil.'],
-      '1': ['Bring me ore and I\'ll make you something nice.', 'Business is good!', 'Bring me a gift sometime and I\'ll bump your work order up the queue.'],
-      '2': ['You\'re one of my best customers!', 'Here, take this.', 'If your pickaxe feels slow, an upgrade will save hours in the mine.'],
-      '3': ['I consider you a true friend.', 'This one\'s on the house.', 'Past floor 20, weak tools are a liability. Keep yours sharp.'],
-      '4': ['You\'re like family to me.', 'Best friends forever!', 'Sometimes I wonder what metal lies beyond the mountains.'],
+      '0': ['Welcome to the blacksmith shop.', 'Need something upgraded?', 'Low-grade ore bends. Good ore sings when it hits the anvil.', 'Have you tried the mine yet? Bring back ore, and I\'ll do the rest.', 'Winter keeps me busy with stove repairs and tool tune-ups.', 'Your farm tools are seeing real work now. Keep that edge clean.'],
+      '1': ['Bring me ore and I\'ll make you something nice.', 'Business is good!', 'Bring me a gift sometime and I\'ll bump your work order up the queue.', 'The crafting bench has new recipes; practical ones this time.', 'Elena asked for a lighter pan, so I forged one that heats evenly.', 'In summer, quench your tools often. Heat warps steel faster than you think.'],
+      '2': ['You\'re one of my best customers!', 'Here, take this.', 'If your pickaxe feels slow, an upgrade will save hours in the mine.', 'I passed your farm at dawn; those sprinklers are laid out smartly.', 'Marcus breaks fewer pickaxes than he used to. I call that progress.', 'If you want efficiency, keep a chest by each work area.'],
+      '3': ['I consider you a true friend.', 'This one\'s on the house.', 'Past floor 20, weak tools are a liability. Keep yours sharp.', 'Lily keeps asking for delicate metalwork; not my usual job, but she pays in sketches.', 'Fall is perfect forging weather: dry air, steady fire, fewer cracks.', 'Bring me bars in bulk and I can queue upgrades for the week.'],
+      '4': ['You\'re like family to me.', 'Best friends forever!', 'Sometimes I wonder what metal lies beyond the mountains.', 'Your farm has become the standard I use when folks ask what good planning looks like.', 'Sage says iron remembers thunder. I say iron remembers the smith.', 'If anything on your place breaks this winter, I\'ll fix it first.'],
     }
   },
   {
@@ -259,11 +259,41 @@ export const NPCS: NPCDef[] = [
     hatedItems: ['gold_bar', 'diamond'],
     defaultMap: MapId.FOREST, portraitIndex: 4, spriteIndex: 4,
     dialoguePool: {
-      '0': ['The forest speaks to those who listen.', 'Hmm, you have potential.', 'Spring planting going well? The soil remembers kind hands.'],
-      '1': ['Nature rewards patience.', 'The spirits favor you.', 'Bring me a gift sometime, and I will answer one difficult question.'],
-      '2': ['I sense great harmony in you.', 'Let me teach you something.', 'Rare mushrooms appear where sun and shadow trade places.'],
-      '3': ['You understand the old ways.', 'The forest protects its friends.', 'Below floor 20, the mine keeps relics for the brave.'],
-      '4': ['You are a true guardian of nature.', 'I am honored to call you friend.', 'I wonder what ancient names echo beyond the mountains...'],
+      '0': ['The forest speaks to those who listen.', 'Hmm, you have potential.', 'Spring planting going well? The soil remembers kind hands.', 'In summer, the trees hum loudest at dusk.', 'I saw your farm at sunrise; even the crows circled it respectfully.', 'Lily brings me shells and asks what dreams they belonged to.'],
+      '1': ['Nature rewards patience.', 'The spirits favor you.', 'Bring me a gift sometime, and I will answer one difficult question.', 'Have you tried the mine yet? Stone has memories too, though slower ones.', 'The crafting bench has new recipes; some are old rites wearing new names.', 'Owen laughs when I bless his hammer, but he asks me to do it anyway.'],
+      '2': ['I sense great harmony in you.', 'Let me teach you something.', 'Rare mushrooms appear where sun and shadow trade places.', 'Winter is hard but cozy when roots sleep beneath warm snow.', 'Marcus listens to the mountain better than he admits.', 'Your farm paths form a quiet sigil of welcome.'],
+      '3': ['You understand the old ways.', 'The forest protects its friends.', 'Below floor 20, the mine keeps relics for the brave.', 'Elena leaves broth at my door when storms are long; kindness is a potent charm.', 'In fall, every leaf is a letter from the year before.', 'When rain crosses your fields, the earth answers like a drum.'],
+      '4': ['You are a true guardian of nature.', 'I am honored to call you friend.', 'I wonder what ancient names echo beyond the mountains...', 'Your farm and the forest breathe in rhythm now.', 'If winter darkens your heart, walk with me under the cedar moon.', 'Even the sea spirits speak well of you through Finn\'s nets.'],
+    }
+  },
+  {
+    id: 'rose', name: 'Rose', marriageable: true,
+    birthday: { season: Season.WINTER, day: 17 },
+    lovedItems: ['diamond', 'melon', 'pumpkin_soup'],
+    likedItems: ['gold_bar', 'ruby', 'honey'],
+    hatedItems: ['fiber', 'sap', 'stone'],
+    defaultMap: MapId.TOWN, portraitIndex: 5, spriteIndex: 5,
+    dialoguePool: {
+      '0': ['...', 'The bookshop is closed today.', 'New farmer? How quaint.', 'I prefer the city, honestly.', 'Books are better company than people.', 'Don\'t touch the display.'],
+      '1': ['You\'re... persistent.', 'Fine, you can browse.', 'I suppose you have decent taste.', 'Owen keeps pestering me to fix his ledger.', 'Lily\'s paintings are childish but charming.', 'At least you read - that\'s rare here.'],
+      '2': ['I saved a book for you.', 'You\'re not as boring as I expected.', 'Marcus found me a rare mineral ink.', 'Elena\'s soup is the only thing I miss about dinner parties.', 'I catalogued 47 plant species in Sage\'s forest.', 'Your farm is... organized. I respect that.'],
+      '3': ['I wrote you into my journal.', 'Don\'t tell anyone I smiled.', 'You make this village tolerable.', 'I\'ve been writing something... maybe I\'ll show you.', 'Sage says the old language has words we forgot.', 'Winter nights are best with tea and company.'],
+      '4': ['You\'re my favorite chapter.', 'I love you. There, I said it.', 'Let\'s build a library on your farm.', 'Every story needs a home. Ours is here.', 'I never thought I\'d choose a village over the city.', 'Read to me by the fire tonight?'],
+    }
+  },
+  {
+    id: 'finn', name: 'Finn', marriageable: false,
+    birthday: { season: Season.SUMMER, day: 22 },
+    lovedItems: ['bass', 'trout', 'bait'],
+    likedItems: ['salmon', 'catfish', 'wild_berries'],
+    hatedItems: ['coal', 'iron_ore'],
+    defaultMap: MapId.BEACH, portraitIndex: 6, spriteIndex: 6,
+    dialoguePool: {
+      '0': ['Fish aren\'t biting today.', 'Shh, you\'ll scare them.', 'Tide\'s coming in.', 'New here? The pier\'s public, at least.', 'Salt air cures everything.', 'Cast further for the big ones.'],
+      '1': ['Hey, fellow angler!', 'Caught anything good?', 'The reef has catfish in summer.', 'Lily and I used to fish here as kids.', 'Owen made me this hook - never rusts.', 'Morning bites best, around 6 AM.'],
+      '2': ['I\'ll show you my secret spot.', 'You\'ve got a feel for the water!', 'The old pier has legendary fish - if you believe that.', 'Marcus says the mine has underground lakes.', 'Elena packed me lunch again - she worries.', 'Sage says the fish talk to each other.'],
+      '3': ['Best fishing buddy I ever had.', 'There\'s a fish out there nobody\'s caught.', 'Rain makes them hungry - cast during storms.', 'I dream about the deep ocean sometimes.', 'You and me, we understand the tide.', 'Let\'s enter the fishing tournament together.'],
+      '4': ['You\'re the only one who gets it.', 'This pier is our spot now.', 'I carved our initials on the old dock.', 'The legendary fish appeared once - I swear.', 'Best friend a fisherman could ask for.', 'The sea gave me you. I\'m grateful.'],
     }
   },
 
