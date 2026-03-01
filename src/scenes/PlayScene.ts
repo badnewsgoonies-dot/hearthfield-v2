@@ -550,7 +550,11 @@ export class PlayScene extends Phaser.Scene {
     // Grow crops, reset watered
     this.growCrops();
 
-    // NPC daily flags reset by romanceSystem.onDayStart() above
+    // Reset NPC daily flags
+    for (const npcId of Object.keys(this.relationships)) {
+      this.relationships[npcId].talkedToday = false;
+      this.relationships[npcId].giftedToday = false;
+    }
 
     // Restore stamina
     this.player.stamina = this.player.maxStamina;
