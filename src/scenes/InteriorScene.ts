@@ -228,11 +228,12 @@ export class InteriorScene extends Phaser.Scene {
     // Player — spawn one row above door
     const firstExit = [...this.exitTiles][0];
     const [doorX, doorY] = firstExit.split(',').map(Number);
+    const playerScale = T / 16; // sprite is 16x16; scale to fill one tile
     this.player = this.add.sprite(
       this.offX + doorX * T + T / 2,
       this.offY + (doorY - 1) * T + T / 2,
       'player', 0
-    ).setDepth(10);
+    ).setScale(playerScale).setDepth(10);
 
     // Building name title
     this.add.text(camW / 2, this.offY - 6, name, {
