@@ -6,11 +6,11 @@ export class IntroScene extends Phaser.Scene {
   private panelIndex = 0;
 
   private panelText!: Phaser.GameObjects.Text;
-  private promptText!: Phaser.GameObjects.Text;
-  private letterboxTop!: Phaser.GameObjects.Rectangle;
-  private letterboxBottom!: Phaser.GameObjects.Rectangle;
+  private skipText!: Phaser.GameObjects.Text;
+  private autoAdvanceTimer?: Phaser.Time.TimerEvent;
 
   private transitioning = false;
+  private sceneEnding = false;
   private playerName = 'Farmer';
 
   constructor() {
@@ -27,110 +27,128 @@ export class IntroScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     this.storyPanels = [
-      "You've inherited your grandfather's farm...",
-      'The fields are overgrown, the fences worn, and silence fills the old house.',
-      `${this.playerName}, a new season begins in Hearthfield Valley.`,
+      "You've inherited your grandfather's old farm in the valley...",
+      'The fields are overgrown, but the soil is rich...',
+      'The townsfolk say the valley has magic for those who tend it...',
     ];
 
-    const bg = this.add.graphics();
+    const bg = this.add.graphics({ fillStyle: { color: 0x050505 } });
     bg.fillGradientStyle(0x070707, 0x070707, 0x151515, 0x151515, 1);
     bg.fillRect(0, 0, width, height);
-
-    this.letterboxTop = this.add.rectangle(width / 2, 22, width, 44, 0x000000, 1).setAlpha(0);
-    this.letterboxBottom = this.add
-      .rectangle(width / 2, height - 22, width, 44, 0x000000, 1)
-      .setAlpha(0);
 
     this.panelText = this.add
       .text(width / 2, height / 2, this.storyPanels[0], {
         fontFamily: 'monospace',
-        fontSize: '34px',
+        fontSize: '20px',
         align: 'center',
-        color: '#f5edd0',
-        wordWrap: { width: 760 },
-        lineSpacing: 8,
+        color: '#ffdd88',
+        wordWrap: { width: Math.min(width - 120, 760) },
+        lineSpacing: 6,
       })
       .setOrigin(0.5)
       .setAlpha(0)
       .setShadow(0, 4, '#000000', 0.7, false, true);
 
-    this.promptText = this.add
-      .text(width / 2, height - 74, 'Click or SPACE to continue', {
+    this.skipText = this.add
+      .text(width / 2, height - 28, 'Press ESC to skip', {
         fontFamily: 'monospace',
-        fontSize: '16px',
-        color: '#cbc3aa',
+        fontSize: '12px',
+        color: '#b8a46b',
       })
       .setOrigin(0.5)
-      .setAlpha(0)
+      .setAlpha(0.9)
       .setShadow(0, 2, '#000000', 0.6, false, true);
 
-    this.cameras.main.fadeIn(700, 0, 0, 0);
-
-    this.tweens.add({
-      targets: [this.letterboxTop, this.letterboxBottom],
-      alpha: 1,
-      duration: 450,
-      ease: 'Sine.easeOut',
+    this.showPanel();
+    this.input.keyboard?.on('keydown', this.handleKeyDown, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.autoAdvanceTimer?.remove(false);
+      this.input.keyboard?.off('keydown', this.handleKeyDown, this);
     });
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (event.repeat) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.skipToPlay();
+      return;
+    }
+
+    this.advancePanel();
+  }
+
+  private showPanel(): void {
+    if (this.sceneEnding) {
+      return;
+    }
+
+    this.autoAdvanceTimer?.remove(false);
+    this.panelText.setText(this.storyPanels[this.panelIndex]);
+    this.panelText.setAlpha(0);
 
     this.tweens.add({
       targets: this.panelText,
       alpha: 1,
-      y: this.panelText.y - 8,
-      duration: 850,
-      ease: 'Cubic.easeOut',
+      duration: 550,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.autoAdvanceTimer = this.time.delayedCall(3000, () => this.advancePanel());
+      },
     });
-
-    this.tweens.add({
-      targets: this.promptText,
-      alpha: { from: 0.2, to: 0.9 },
-      duration: 950,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    this.input.on('pointerdown', () => this.advancePanel());
-    this.input.keyboard?.on('keydown-SPACE', () => this.advancePanel());
   }
 
   private advancePanel(): void {
-    if (this.transitioning) {
+    if (this.transitioning || this.sceneEnding) {
       return;
     }
 
     this.transitioning = true;
-    this.panelIndex += 1;
-
-    if (this.panelIndex >= this.storyPanels.length) {
-      this.cameras.main.fadeOut(900, 0, 0, 0);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-        this.scene.start(Scenes.PLAY, { playerName: this.playerName });
-      });
-      return;
-    }
+    this.autoAdvanceTimer?.remove(false);
 
     this.tweens.add({
       targets: this.panelText,
       alpha: 0,
-      y: this.panelText.y + 8,
-      duration: 360,
+      duration: 350,
       ease: 'Sine.easeIn',
       onComplete: () => {
-        this.panelText.setText(this.storyPanels[this.panelIndex]);
-        this.panelText.setY(this.cameras.main.centerY + 8);
+        this.panelIndex += 1;
+        this.transitioning = false;
 
-        this.tweens.add({
-          targets: this.panelText,
-          alpha: 1,
-          y: this.cameras.main.centerY - 8,
-          duration: 560,
-          ease: 'Cubic.easeOut',
-          onComplete: () => {
-            this.transitioning = false;
-          },
-        });
+        if (this.panelIndex >= this.storyPanels.length) {
+          this.transitionToPlay();
+          return;
+        }
+
+        this.showPanel();
       },
+    });
+  }
+
+  private skipToPlay(): void {
+    if (this.sceneEnding) {
+      return;
+    }
+
+    this.autoAdvanceTimer?.remove(false);
+    this.transitionToPlay();
+  }
+
+  private transitionToPlay(): void {
+    if (this.sceneEnding) {
+      return;
+    }
+
+    this.sceneEnding = true;
+    this.transitioning = true;
+    this.autoAdvanceTimer?.remove(false);
+
+    this.cameras.main.fadeOut(900, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.stop(Scenes.INTRO);
+      this.scene.start(Scenes.PLAY, { playerName: this.playerName });
     });
   }
 }

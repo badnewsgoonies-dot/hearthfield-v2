@@ -130,47 +130,69 @@ export class BootScene extends Phaser.Scene {
       const ox = i * T;
       switch(i) {
         case 0: // GRASS
-          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x89ce63); g.fillRect(ox,0,T,4); g.fillRect(ox+1,6,2,1); g.fillRect(ox+9,2,2,1);
-          g.fillStyle(0x5aa43d); g.fillRect(ox,12,T,4); g.fillRect(ox+4,8,1,2); g.fillRect(ox+11,9,1,2);
-          g.fillStyle(0x4a8f33);
-          g.fillRect(ox+2,3,1,2); g.fillRect(ox+6,11,1,2); g.fillRect(ox+12,5,1,2); g.fillRect(ox+14,10,1,2);
-          g.fillStyle(0x9fe07a);
-          g.fillRect(ox+3,4,1,1); g.fillRect(ox+8,7,1,1); g.fillRect(ox+13,2,1,1); g.fillRect(ox+5,13,1,1);
+          g.fillStyle(0x6fb950); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x84cc61); g.fillRect(ox,0,T,4);
+          g.fillStyle(0x5aa13f); g.fillRect(ox,12,T,4);
+          g.fillStyle(0x9bdd74);
+          g.fillRect(ox+2,2,1,1); g.fillRect(ox+10,3,1,1); g.fillRect(ox+6,7,1,1); g.fillRect(ox+12,9,1,1);
+          g.fillStyle(0x4b8935);
+          for (let y = 1; y < T - 1; y++) {
+            for (let x = 1; x < T - 1; x++) {
+              if (((x * 13 + y * 7 + i) % 19) === 0 || ((x * 5 + y * 11 + i) % 29) === 0) {
+                g.fillRect(ox + x, y, 1, 1);
+              }
+            }
+          }
           break;
         case 1: // DIRT
-          g.fillStyle(0x9a6a3f); g.fillRect(ox,0,T,T);
-          g.fillStyle(0xae7b4d); g.fillRect(ox,0,T,4); g.fillRect(ox+3,6,2,1);
-          g.fillStyle(0x7f5431); g.fillRect(ox,12,T,4); g.fillRect(ox+10,9,2,1);
-          g.fillStyle(0xc49667); g.fillRect(ox+2,3,1,1); g.fillRect(ox+12,5,1,1); g.fillRect(ox+7,11,1,1);
-          g.fillStyle(0x6d4629); g.fillRect(ox+5,7,2,1); g.fillRect(ox+13,10,2,1); g.fillRect(ox+1,13,2,1);
+          g.fillStyle(0x8f6039); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xa77448); g.fillRect(ox,0,T,4);
+          g.fillStyle(0x734a2b); g.fillRect(ox,12,T,4);
+          g.fillStyle(0xb88454);
+          g.fillRect(ox+2,5,2,1); g.fillRect(ox+9,7,2,1); g.fillRect(ox+5,10,2,1); g.fillRect(ox+12,3,1,2);
+          g.fillStyle(0x674126);
+          g.fillRect(ox+4,3,1,2); g.fillRect(ox+11,9,1,2); g.fillRect(ox+1,11,2,1);
+          g.fillStyle(0xc7b8a3);
+          g.fillRect(ox+3,8,1,1); g.fillRect(ox+7,4,1,1); g.fillRect(ox+13,11,1,1); g.fillRect(ox+10,13,1,1);
           break;
         case 2: // TILLED
-          g.fillStyle(0x6f4a2c); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x55361f);
-          for (let r = 2; r < T; r += 4) g.fillRect(ox, r, T, 1);
-          g.fillStyle(0x84603a);
+          g.fillStyle(0x674022); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x7a5230);
           for (let r = 0; r < T; r += 4) g.fillRect(ox + 1, r, T - 2, 1);
+          g.fillStyle(0x4a2d18);
+          for (let r = 2; r < T; r += 4) g.fillRect(ox, r, T, 1);
+          g.fillStyle(0x5a351c); g.fillRect(ox, T - 1, T, 1);
           break;
         case 3: // WATERED
-          g.fillStyle(0x4c3727); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x3d2b1f);
+          g.fillStyle(0x563823); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x3e2718);
           for (let r = 2; r < T; r += 4) g.fillRect(ox, r, T, 1);
-          g.fillStyle(0x5f4c3b); g.fillRect(ox, 0, T, 2);
-          g.fillStyle(0x6f8aa1); g.fillRect(ox+2,3,2,1); g.fillRect(ox+9,7,2,1); g.fillRect(ox+5,11,2,1);
+          g.fillStyle(0x6a4631);
+          for (let r = 0; r < T; r += 4) g.fillRect(ox + 1, r, T - 2, 1);
+          g.fillStyle(0x4f6e8d);
+          g.fillRect(ox+2,1,3,1); g.fillRect(ox+8,5,4,1); g.fillRect(ox+4,9,3,1); g.fillRect(ox+10,13,2,1);
+          g.fillStyle(0x7fa7c5);
+          g.fillRect(ox+3,1,1,1); g.fillRect(ox+10,5,1,1); g.fillRect(ox+5,9,1,1);
           break;
         case 4: // WATER
-          g.fillStyle(0x2f79bf); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x4d9de0); g.fillRect(ox,0,T,6); g.fillRect(ox+2,8,11,2);
-          g.fillStyle(0x78c4f4);
-          g.fillRect(ox+1,3,5,1); g.fillRect(ox+9,5,4,1); g.fillRect(ox+5,9,6,1); g.fillRect(ox+2,13,5,1);
-          g.fillStyle(0x1f5e99); g.fillRect(ox,14,T,2);
+          g.fillStyle(0x2b6eae); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x357fbe); g.fillRect(ox,0,T,6);
+          g.fillStyle(0x235f97); g.fillRect(ox,11,T,5);
+          g.fillStyle(0x5ba8e1);
+          g.fillRect(ox+1,3,4,1); g.fillRect(ox+7,2,5,1); g.fillRect(ox+4,7,6,1); g.fillRect(ox+10,9,4,1); g.fillRect(ox+2,13,5,1);
+          g.fillStyle(0x8ed0f7);
+          g.fillRect(ox+2,3,2,1); g.fillRect(ox+9,2,2,1); g.fillRect(ox+6,7,2,1); g.fillRect(ox+12,9,1,1); g.fillRect(ox+4,13,2,1);
           break;
         case 5: // STONE
-          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x777b82); g.fillRect(ox+3,5,10,8);
-          g.fillStyle(0x999ea6); g.fillRect(ox+4,5,7,3); g.fillRect(ox+6,10,5,2);
-          g.fillStyle(0x5d6168); g.fillRect(ox+4,12,7,1); g.fillRect(ox+11,8,1,3);
+          g.fillStyle(0x7b8088); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x9399a2); g.fillRect(ox,0,T,4);
+          g.fillStyle(0x666b73); g.fillRect(ox,12,T,4);
+          g.fillStyle(0xaeb4bc);
+          g.fillRect(ox+2,3,2,1); g.fillRect(ox+8,5,3,1); g.fillRect(ox+5,9,2,1); g.fillRect(ox+11,11,2,1);
+          g.fillStyle(0x4f545c);
+          g.fillRect(ox+4,4,1,4); g.fillRect(ox+4,7,3,1);
+          g.fillRect(ox+10,6,1,4); g.fillRect(ox+8,9,3,1);
+          g.fillRect(ox+2,11,2,1); g.fillRect(ox+3,12,1,2);
           break;
         case 6: // WOOD
           g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
@@ -180,18 +202,24 @@ export class BootScene extends Phaser.Scene {
           g.fillStyle(0xc38754); g.fillRect(ox+7,8,2,1); g.fillRect(ox+8,11,2,1);
           break;
         case 7: // SAND
-          g.fillStyle(0xe6d39b); g.fillRect(ox,0,T,T);
-          g.fillStyle(0xf0e0b2); g.fillRect(ox,0,T,4);
-          g.fillStyle(0xd2bd86); g.fillRect(ox,12,T,4);
-          g.fillStyle(0xc9b278); g.fillRect(ox+2,6,1,1); g.fillRect(ox+7,10,1,1); g.fillRect(ox+12,8,1,1);
+          g.fillStyle(0xe7d3a0); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xf0dfb7); g.fillRect(ox,0,T,4);
+          g.fillStyle(0xd3bb86); g.fillRect(ox,12,T,4);
+          g.fillStyle(0xc9af77);
+          g.fillRect(ox+2,6,1,1); g.fillRect(ox+7,10,1,1); g.fillRect(ox+12,8,1,1); g.fillRect(ox+5,4,1,1);
+          g.fillStyle(0xf6eee0);
+          g.fillRect(ox+3,11,1,1); g.fillRect(ox+9,5,1,1); g.fillRect(ox+13,12,1,1);
           break;
         case 8: // PATH
-          g.fillStyle(0xbf9a67); g.fillRect(ox,0,T,T);
-          g.fillStyle(0xd1af7d); g.fillRect(ox,0,T,3);
-          g.fillStyle(0x9f7f53); g.fillRect(ox,13,T,3);
-          g.fillStyle(0x8b6c45);
-          g.fillRect(ox+2,4,2,2); g.fillRect(ox+11,6,2,2); g.fillRect(ox+6,10,3,2); g.fillRect(ox+1,12,2,1);
-          g.fillStyle(0xe3c18e); g.fillRect(ox+4,7,1,1); g.fillRect(ox+9,3,1,1);
+          g.fillStyle(0xc7a372); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xdcb888); g.fillRect(ox,0,T,3);
+          g.fillStyle(0xab8558); g.fillRect(ox,13,T,3);
+          g.fillStyle(0x916c45);
+          g.fillRect(ox+2,4,2,2); g.fillRect(ox+11,6,2,2); g.fillRect(ox+6,10,3,2); g.fillRect(ox+1,12,2,1); g.fillRect(ox+8,2,2,1);
+          g.fillStyle(0xe7c695);
+          g.fillRect(ox+4,7,1,1); g.fillRect(ox+9,3,1,1); g.fillRect(ox+12,11,1,1);
+          g.fillStyle(0xb28d60);
+          g.fillRect(ox+5,5,4,1); g.fillRect(ox+3,9,5,1); g.fillRect(ox+9,12,3,1);
           break;
         case 9: // FENCE TILE
           g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
@@ -483,10 +511,17 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xDEB887); g.fillRect(ox+2,2,12,9); g.fillStyle(0xFFFFF0); g.fillRect(ox+4,3,3,4); g.fillRect(ox+8,4,3,3);
     g.fillStyle(0xFF4444); g.fillRect(ox+5,3,1,1); g.fillRect(ox+9,4,1,1);
     // 7: House
-    ox=T*7; g.fillStyle(0xA0522D); g.fillRect(ox+1,6,14,10);
-    g.fillStyle(0xCC4444); g.fillRect(ox,5,16,2); g.fillRect(ox+2,3,12,2); g.fillRect(ox+4,1,8,2); g.fillRect(ox+6,0,4,1);
-    g.fillStyle(0x5C3A21); g.fillRect(ox+6,10,4,6);
-    g.fillStyle(0x87CEEB); g.fillRect(ox+2,7,3,3); g.fillRect(ox+11,7,3,3);
+    ox=T*7;
+    g.fillStyle(0x8d5a36); g.fillRect(ox,8,16,8);
+    g.fillStyle(0xa9744c); g.fillRect(ox+1,8,14,3);
+    g.fillStyle(0x9f4e39); g.fillTriangle(ox+8,0,ox,8,ox+16,8);
+    g.fillStyle(0x7f3f2f); g.fillTriangle(ox+8,1,ox+1,8,ox+8,8);
+    g.fillStyle(0x6a3f26); g.fillRect(ox+6,10,4,6);
+    g.fillStyle(0x4f2f1d); g.fillRect(ox+7,10,2,6);
+    g.fillStyle(0x9fd7f0); g.fillRect(ox+2,9,3,3); g.fillRect(ox+11,9,3,3);
+    g.fillStyle(0xd9f1ff); g.fillRect(ox+2,9,2,1); g.fillRect(ox+11,9,2,1);
+    g.fillStyle(0x6f6f6f); g.fillRect(ox+12,2,2,4);
+    g.fillStyle(0x8c8c8c); g.fillRect(ox+12,2,1,4);
 
     g.generateTexture('objects', T*8, T); g.destroy();
     const oTex = this.textures.get('objects');
@@ -642,22 +677,30 @@ export class BootScene extends Phaser.Scene {
     const W = T * 2;
     const H = T * 3;
 
-    g.fillStyle(0x6B4226); g.fillRect(12, 24, 8, 24);
-    g.fillStyle(0x8B5A2B); g.fillRect(14, 26, 4, 20);
+    const canopyBottom = Math.floor(H * 0.6);
+    const trunkTop = canopyBottom;
+    const trunkWidth = 8;
+    const trunkX = Math.floor((W - trunkWidth) / 2);
 
-    g.fillStyle(0x2D6B2D);
-    g.fillRect(2, 18, 28, 10);
-    g.fillStyle(0x3A8B3A);
-    g.fillRect(4, 10, 24, 12);
-    g.fillStyle(0x4AAE4A);
-    g.fillRect(6, 4, 20, 12);
-    g.fillStyle(0x5DC85D);
-    g.fillRect(10, 0, 12, 8);
+    g.fillStyle(0x2e6f34);
+    g.fillRect(4, 4, W - 8, canopyBottom - 4);
+    g.fillRect(2, 10, W - 4, canopyBottom - 14);
+    g.fillStyle(0x3f8d44);
+    g.fillRect(6, 2, W - 12, canopyBottom - 6);
+    g.fillRect(8, 0, W - 16, 6);
+    g.fillStyle(0x56a85a);
+    g.fillRect(10, 3, W - 20, 5);
+    g.fillRect(12, 10, W - 24, 4);
+    g.fillStyle(0x275f2d);
+    g.fillRect(4, 10, 4, canopyBottom - 14);
+    g.fillRect(8, 5, 3, 8);
+    g.fillStyle(0x4b9a50);
+    g.fillRect(18, 6, 3, 4);
+    g.fillRect(22, 12, 3, 3);
 
-    g.fillStyle(0x6BDB6B);
-    g.fillRect(12, 2, 4, 3);
-    g.fillRect(8, 8, 3, 3);
-    g.fillRect(18, 6, 3, 2);
+    g.fillStyle(0x6b4226); g.fillRect(trunkX, trunkTop, trunkWidth, H - trunkTop);
+    g.fillStyle(0x8a5935); g.fillRect(trunkX + 2, trunkTop + 2, trunkWidth - 4, H - trunkTop - 2);
+    g.fillStyle(0x5a351f); g.fillRect(trunkX, trunkTop, 2, H - trunkTop);
 
     g.generateTexture('tree', W, H);
     g.destroy();
@@ -666,10 +709,11 @@ export class BootScene extends Phaser.Scene {
   private genFenceComposite(T: number) {
     const g = this.make.graphics();
 
-    g.fillStyle(0x8B6914); g.fillRect(6, 2, 4, 14);
-    g.fillStyle(0xA0822C); g.fillRect(0, 4, T, 3);
-    g.fillStyle(0xA0822C); g.fillRect(0, 10, T, 3);
-    g.fillStyle(0xBB9944); g.fillRect(6, 1, 4, 2);
+    g.fillStyle(0x7a4f2d); g.fillRect(6, 1, 4, 15);
+    g.fillStyle(0x996841); g.fillRect(0, 4, T, 2);
+    g.fillStyle(0x996841); g.fillRect(0, 10, T, 2);
+    g.fillStyle(0xbd8a5a); g.fillRect(7, 1, 1, 14);
+    g.fillStyle(0xc99968); g.fillRect(1, 4, T - 2, 1); g.fillRect(1, 10, T - 2, 1);
 
     g.generateTexture('fence', T, T);
     g.destroy();

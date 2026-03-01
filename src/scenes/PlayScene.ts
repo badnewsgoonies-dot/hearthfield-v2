@@ -880,7 +880,22 @@ export class PlayScene extends Phaser.Scene {
           break;
         case InteractionKind.BED:
           if (this.tutorialActive && this.tutorialStep === 5) this.advanceTutorial(6);
-          this.endDay();
+          // Sleep transition: fade out, advance day, fade back in
+          this.dayPaused = true;
+          this.cameras.main.fadeOut(600, 0, 0, 0);
+          this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.endDay();
+            this.player.stamina = MAX_STAMINA;
+            const c = this.calendar;
+            this.events.emit(Events.TOAST, { 
+              message: `☀️ Day ${c.day}, ${c.season} — Year ${c.year}`, 
+              color: '#ffdd44', duration: 3000 
+            });
+            this.cameras.main.fadeIn(800, 0, 0, 0);
+            this.cameras.main.once('camerafadeincomplete', () => {
+              this.dayPaused = false;
+            });
+          });
           break;
         case InteractionKind.NPC: {
           if (data.targetId) {
@@ -1336,16 +1351,18 @@ export class PlayScene extends Phaser.Scene {
       if (tile.type === TileType.WATER) mark(tile.x, tile.y);
     }
     
-    // House — block roof and upper walls, leave interior walkable for bed/kitchen
-    for (let x = 18; x <= 22; x++) {
+    // House — roof is solid, interior is walkable (bed at 22,8 / kitchen at 18,8)
+    for (let x = 17; x <= 23; x++) {
       for (let y = 4; y <= 6; y++) {
-        mark(x, y);
+        mark(x, y); // roof + upper walls
       }
     }
-    mark(17, 7); mark(17, 8); // left wall
-    mark(23, 7); mark(23, 8); // right wall
+    // Side walls of house (y=7-8)
+    mark(17, 7); mark(17, 8);
+    mark(23, 7); mark(23, 8);
+    // Entry: tiles 19-21, y=9 are open (south face door)
     
-    // Trees
+    // Trees — same positions as createWorldObjects
     const treePositions = [
       [2, 1], [5, 0], [8, 1], [12, 0], [15, 1], [33, 0], [36, 1], [38, 0],
       [2, 28], [6, 29], [10, 28], [14, 29], [33, 28], [36, 29], [38, 28],
@@ -1356,6 +1373,23 @@ export class PlayScene extends Phaser.Scene {
     for (const [tx, ty] of treePositions) {
       mark(tx, ty);
     }
+    
+    // Fences around farm plot (same as createWorldObjects)
+    for (let fx = 10; fx <= 28; fx++) {
+      for (const fy of [10, 20]) {
+        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
+        mark(fx, fy);
+      }
+    }
+    for (let fy = 11; fy <= 19; fy++) {
+      for (const fx of [10, 28]) {
+        mark(fx, fy);
+      }
+    }
+    
+    // Coop and Barn tops
+    for (let x = 27; x <= 29; x++) mark(x, 9);
+    for (let x = 31; x <= 33; x++) mark(x, 9);
     
     // Map border
     for (let x = -1; x <= FARM_WIDTH; x++) {
@@ -1391,6 +1425,8 @@ export class PlayScene extends Phaser.Scene {
       lily: { x: 6, y: 20 },     // near the pond
       marcus: { x: 35, y: 5 },   // at the mine
       sage: { x: 18, y: 22 },
+      rose: { x: 24, y: 23 },    // town square, near Elena
+      finn: { x: 8, y: 22 },     // by the water/beach
     };
 
     for (const npc of NPCS) {

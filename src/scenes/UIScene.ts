@@ -79,6 +79,7 @@ export class UIScene extends Phaser.Scene {
   private craftingCookingMode = false;
   private isCraftingOpen = false;
   private questTrackerText!: Phaser.GameObjects.Text;
+  private zoneLabel!: Phaser.GameObjects.Text;
 
   private inventoryPanel!: InventoryPanel;
   private shopPanel!: ShopPanel;
@@ -88,6 +89,8 @@ export class UIScene extends Phaser.Scene {
   private isShopOpen = false;
   private isDialogueOpen = false;
   private pauseToggled = false;
+  private pauseOverlay!: Phaser.GameObjects.Container;
+  private pauseVisible = false;
   public touchControls!: TouchControls;
 
   constructor() {
@@ -146,6 +149,19 @@ export class UIScene extends Phaser.Scene {
     if (ratio > 0.5) this.staminaBar.setFillStyle(0x44cc44);
     else if (ratio > 0.25) this.staminaBar.setFillStyle(0xcccc44);
     else this.staminaBar.setFillStyle(0xcc4444);
+
+    // Zone label
+    const px = Math.floor(this.playScene.player.x / 48);
+    const py = Math.floor(this.playScene.player.y / 48);
+    let zone = 'The Valley';
+    if (py >= 22 && px >= 8 && px <= 32) zone = '🏘 Town Square';
+    else if (py >= 11 && py <= 19 && px >= 11 && px <= 27) zone = '🌾 Farm';
+    else if (py >= 6 && py <= 8 && px >= 18 && px <= 22) zone = '🏠 Home';
+    else if (px <= 9 && py >= 18) zone = '🏖 Pond';
+    else if (py <= 5 && px >= 33) zone = '⛏ Mine Entrance';
+    else if (py <= 3) zone = '🌲 Northern Woods';
+    else if (py >= 27) zone = '🏝 South Shore';
+    this.zoneLabel.setText(zone);
 
     if (this.toastText.visible) {
       this.toastTimer -= delta;
@@ -227,11 +243,35 @@ export class UIScene extends Phaser.Scene {
       backgroundColor: '#00000088', padding: { x: 4, y: 2 },
       wordWrap: { width: 200 },
     }).setOrigin(1, 0).setDepth(111);
+    
+    // Zone label — shows current area name
+    this.zoneLabel = this.add.text(140, 26, '', {
+      fontSize: '10px', color: '#88aa88', fontFamily: 'monospace',
+    }).setDepth(111);
   }
 
   private createToast(): void {
+    // Pause overlay
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
+    this.pauseOverlay = this.add.container(0, 0);
+    const bg = this.add.rectangle(w/2, h/2, w, h, 0x000000, 0.7).setDepth(9000);
+    const title = this.add.text(w/2, h/2 - 60, '⏸ PAUSED', {
+      fontSize: '32px', color: '#ffdd88', fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(9001);
+    const hint = this.add.text(w/2, h/2, 'ESC to resume', {
+      fontSize: '16px', color: '#aaaaaa', fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(9001);
+    const saveHint = this.add.text(w/2, h/2 + 30, 'Game auto-saves when you sleep', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(9001);
+    const statsText = this.add.text(w/2, h/2 + 70, '', {
+      fontSize: '12px', color: '#aaccff', fontFamily: 'monospace', align: 'center',
+    }).setOrigin(0.5).setDepth(9001);
+    statsText.setData('isStats', true);
+    this.pauseOverlay.add([bg, title, hint, saveHint, statsText]);
+    this.pauseOverlay.setVisible(false);
+    this.pauseOverlay.setDepth(9000);
 
     this.toastText = this.add
       .text(w / 2, h / 2, '', {
@@ -594,8 +634,19 @@ export class UIScene extends Phaser.Scene {
   private togglePause(): void {
     this.pauseToggled = !this.pauseToggled;
     this.applyPauseState();
+    this.pauseOverlay.setVisible(this.pauseToggled);
     if (this.pauseToggled) {
-      this.showToast('PAUSED', 1000, '#ffdd55');
+      // Update stats text
+      const ps = this.playScene;
+      const s = ps.stats;
+      const statsEl = this.pauseOverlay.list.find((c: any) => c.getData?.('isStats')) as Phaser.GameObjects.Text | undefined;
+      if (statsEl) {
+        statsEl.setText([
+          `Day ${ps.calendar.day} of ${ps.calendar.season} — Year ${ps.calendar.year}`,
+          `Gold: ${ps.player.gold}g | Crops: ${s.cropsHarvested} | Fish: ${s.fishCaught}`,
+          `Items shipped: ${s.itemsShipped} | Gifts: ${s.giftsGiven}`,
+        ].join('\n'));
+      }
     }
   }
 

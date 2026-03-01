@@ -57,13 +57,14 @@ export const ITEMS: ItemDef[] = [
   { id: 'catfish', name: 'Catfish', category: ItemCategory.FISH, sellPrice: 200, description: 'Lurks in the deep.', spriteIndex: 35 },
   { id: 'tuna', name: 'Tuna', category: ItemCategory.FISH, sellPrice: 100, description: 'Fast and powerful.', spriteIndex: 36 },
   { id: 'legendary_fish', name: 'Legend', category: ItemCategory.FISH, sellPrice: 5000, description: 'The fish of legend.', spriteIndex: 37 },
+  { id: 'bass', name: 'Bass', category: ItemCategory.FISH, sellPrice: 90, description: 'A dependable river fish.', spriteIndex: 109 },
 
   // Food (cooked / foraged)
   { id: 'wild_berries', name: 'Wild Berries', category: ItemCategory.FOOD, sellPrice: 20, description: 'Sweet and wild.', edible: true, staminaRestore: 15, spriteIndex: 40 },
   { id: 'mushroom', name: 'Mushroom', category: ItemCategory.FOOD, sellPrice: 40, description: 'An earthy fungus.', edible: true, staminaRestore: 20, spriteIndex: 41 },
   { id: 'baked_potato', name: 'Baked Potato', category: ItemCategory.FOOD, sellPrice: 120, description: 'Warm and filling.', edible: true, staminaRestore: 35, spriteIndex: 42 },
   { id: 'tomato_soup', name: 'Tomato Soup', category: ItemCategory.FOOD, sellPrice: 150, description: 'Comforting.', edible: true, staminaRestore: 40, spriteIndex: 43 },
-  { id: 'fish_stew', name: 'Fish Stew', category: ItemCategory.FOOD, sellPrice: 200, description: 'Hearty and warming.', edible: true, staminaRestore: 50, buff: BuffType.FISHING, buffDuration: 120, spriteIndex: 44 },
+  { id: 'fish_stew', name: 'Fish Stew', category: ItemCategory.FOOD, sellPrice: 250, description: 'Hearty and warming.', edible: true, staminaRestore: 50, buff: BuffType.FISHING, buffDuration: 120, spriteIndex: 44 },
   { id: 'farmers_lunch', name: "Farmer's Lunch", category: ItemCategory.FOOD, sellPrice: 180, description: 'Energizing!', edible: true, staminaRestore: 60, buff: BuffType.FARMING, buffDuration: 120, spriteIndex: 45 },
   { id: 'miners_treat', name: "Miner's Treat", category: ItemCategory.FOOD, sellPrice: 220, description: 'Sustaining.', edible: true, staminaRestore: 50, buff: BuffType.MINING, buffDuration: 180, spriteIndex: 46 },
   { id: 'lucky_charm', name: 'Lucky Charm', category: ItemCategory.FOOD, sellPrice: 300, description: 'Feels lucky!', edible: true, staminaRestore: 25, buff: BuffType.LUCK, buffDuration: 240, spriteIndex: 47 },
@@ -76,27 +77,37 @@ export const ITEMS: ItemDef[] = [
   { id: 'diamond', name: 'Diamond', category: ItemCategory.GEM, sellPrice: 750, description: 'Flawless.', spriteIndex: 52 },
 
   // Craftables & Machines
-  { id: 'chest', name: 'Chest', category: ItemCategory.CRAFTABLE, sellPrice: 0, description: 'Stores items.', spriteIndex: 53 },
+  { id: 'chest', name: 'Chest', category: ItemCategory.CRAFTABLE, sellPrice: 80, description: 'Stores items.', spriteIndex: 53 },
   { id: 'sprinkler', name: 'Sprinkler', category: ItemCategory.MACHINE, sellPrice: 100, description: 'Waters adjacent tiles.', spriteIndex: 54 },
   { id: 'scarecrow', name: 'Scarecrow', category: ItemCategory.MACHINE, sellPrice: 50, description: 'Protects crops from crows.', spriteIndex: 55 },
-  { id: 'furnace', name: 'Furnace', category: ItemCategory.MACHINE, sellPrice: 0, description: 'Smelts ore into bars.', spriteIndex: 56 },
+  { id: 'furnace', name: 'Furnace', category: ItemCategory.MACHINE, sellPrice: 150, description: 'Smelts ore into bars.', spriteIndex: 56 },
   { id: 'bee_house', name: 'Bee House', category: ItemCategory.MACHINE, sellPrice: 100, description: 'Produces honey.', spriteIndex: 57 },
   { id: 'honey', name: 'Honey', category: ItemCategory.FOOD, sellPrice: 100, description: 'Golden sweetness.', edible: true, staminaRestore: 20, spriteIndex: 58 },
+  { id: 'wheat_flour', name: 'Wheat Flour', category: ItemCategory.RESOURCE, sellPrice: 45, description: 'Fine flour for baking.', spriteIndex: 110 },
 
   // Gifts / Special
-  { id: 'bouquet', name: 'Bouquet', category: ItemCategory.GIFT, sellPrice: 0, description: 'Express your feelings.', spriteIndex: 59 },
-  { id: 'pendant', name: 'Mermaid Pendant', category: ItemCategory.SPECIAL, sellPrice: 0, description: 'A proposal item.', spriteIndex: 60 },
+  { id: 'bouquet', name: 'Bouquet', category: ItemCategory.GIFT, sellPrice: 120, description: 'Express your feelings.', spriteIndex: 59 },
+  { id: 'pendant', name: 'Mermaid Pendant', category: ItemCategory.SPECIAL, sellPrice: 500, description: 'A proposal item.', spriteIndex: 60 },
   { id: 'starfruit', name: 'Starfruit', category: ItemCategory.CROP, sellPrice: 750, description: 'An exotic fruit.', spriteIndex: 61 },
 
   // Tools (in inventory form)
-  { id: 'tool_hoe', name: 'Hoe', category: ItemCategory.TOOL, sellPrice: 0, description: 'Tills soil.', spriteIndex: 62 },
-  { id: 'tool_watering_can', name: 'Watering Can', category: ItemCategory.TOOL, sellPrice: 0, description: 'Waters crops.', spriteIndex: 63 },
+  { id: 'tool_hoe', name: 'Hoe', category: ItemCategory.TOOL, sellPrice: 150, description: 'Tills soil.', spriteIndex: 62 },
+  { id: 'tool_watering_can', name: 'Watering Can', category: ItemCategory.TOOL, sellPrice: 175, description: 'Waters crops.', spriteIndex: 63 },
 
   // More cooked food
   { id: 'omelet', name: 'Omelet', category: ItemCategory.FOOD, sellPrice: 125, description: 'Fluffy and delicious.', edible: true, staminaRestore: 40, spriteIndex: 64 },
   { id: 'pumpkin_soup', name: 'Pumpkin Soup', category: ItemCategory.FOOD, sellPrice: 300, description: 'Creamy and warming.', edible: true, staminaRestore: 60, spriteIndex: 65 },
-  { id: 'blueberry_tart', name: 'Blueberry Tart', category: ItemCategory.FOOD, sellPrice: 150, description: 'Sweet and tangy.', edible: true, staminaRestore: 35, spriteIndex: 66 },
-  { id: 'corn_chowder', name: 'Corn Chowder', category: ItemCategory.FOOD, sellPrice: 175, description: 'Rich and hearty.', edible: true, staminaRestore: 45, spriteIndex: 67 },
+  { id: 'blueberry_tart', name: 'Blueberry Tart', category: ItemCategory.FOOD, sellPrice: 280, description: 'Sweet and tangy.', edible: true, staminaRestore: 35, spriteIndex: 66 },
+  { id: 'corn_chowder', name: 'Corn Chowder', category: ItemCategory.FOOD, sellPrice: 280, description: 'Rich and hearty.', edible: true, staminaRestore: 45, spriteIndex: 67 },
+  { id: 'berry_smoothie', name: 'Berry Smoothie', category: ItemCategory.FOOD, sellPrice: 150, description: 'Cool and fruity.', edible: true, staminaRestore: 30, spriteIndex: 111 },
+  { id: 'grilled_salmon', name: 'Grilled Salmon', category: ItemCategory.FOOD, sellPrice: 200, description: 'Perfectly seared salmon.', edible: true, staminaRestore: 35, spriteIndex: 112 },
+  { id: 'honey_cake', name: 'Honey Cake', category: ItemCategory.FOOD, sellPrice: 350, description: 'A rich, sweet cake.', edible: true, staminaRestore: 65, spriteIndex: 113 },
+  { id: 'fruit_salad', name: 'Fruit Salad', category: ItemCategory.FOOD, sellPrice: 200, description: 'A bright mix of seasonal fruit.', edible: true, staminaRestore: 38, spriteIndex: 114 },
+  { id: 'spicy_peppers', name: 'Spicy Peppers', category: ItemCategory.FOOD, sellPrice: 180, description: 'A fiery side dish.', edible: true, staminaRestore: 28, spriteIndex: 115 },
+  { id: 'cranberry_sauce', name: 'Cranberry Sauce', category: ItemCategory.FOOD, sellPrice: 120, description: 'Sweet and tart sauce.', edible: true, staminaRestore: 22, spriteIndex: 116 },
+  { id: 'fried_egg', name: 'Fried Egg', category: ItemCategory.FOOD, sellPrice: 100, description: 'Simple and satisfying.', edible: true, staminaRestore: 18, spriteIndex: 117 },
+  { id: 'cheese_omelet', name: 'Cheese Omelet', category: ItemCategory.FOOD, sellPrice: 220, description: 'Fluffy omelet with melted cheese.', edible: true, staminaRestore: 48, spriteIndex: 118 },
+  { id: 'garlic', name: 'Garlic', category: ItemCategory.CROP, sellPrice: 60, description: 'A pungent cooking staple.', spriteIndex: 119 },
   // Machines
   { id: 'cheese_press', name: 'Cheese Press', category: ItemCategory.MACHINE, sellPrice: 150, description: 'Turns milk into cheese.', spriteIndex: 68 },
   { id: 'mayo_machine', name: 'Mayo Machine', category: ItemCategory.MACHINE, sellPrice: 100, description: 'Turns eggs into mayo.', spriteIndex: 69 },
@@ -159,7 +170,7 @@ export const RECIPES: RecipeDef[] = [
   // Cooking (kitchen)
   { id: 'cook_baked_potato', name: 'Baked Potato', resultId: 'baked_potato', resultQty: 1, ingredients: [{ itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 42 },
   { id: 'cook_tomato_soup', name: 'Tomato Soup', resultId: 'tomato_soup', resultQty: 1, ingredients: [{ itemId: 'tomato', qty: 2 }], isCooking: true, spriteIndex: 43 },
-  { id: 'cook_fish_stew', name: 'Fish Stew', resultId: 'fish_stew', resultQty: 1, ingredients: [{ itemId: 'trout', qty: 1 }, { itemId: 'tomato', qty: 1 }, { itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 44 },
+  { id: 'cook_fish_stew', name: 'Fish Stew', resultId: 'fish_stew', resultQty: 1, ingredients: [{ itemId: 'bass', qty: 1 }, { itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 44 },
   { id: 'cook_farmers_lunch', name: "Farmer's Lunch", resultId: 'farmers_lunch', resultQty: 1, ingredients: [{ itemId: 'parsnip', qty: 1 }, { itemId: 'potato', qty: 1 }], isCooking: true, spriteIndex: 45 },
   { id: 'cook_miners_treat', name: "Miner's Treat", resultId: 'miners_treat', resultQty: 1, ingredients: [{ itemId: 'mushroom', qty: 2 }, { itemId: 'gold_bar', qty: 1 }], isCooking: true, spriteIndex: 46 },
 
@@ -168,8 +179,16 @@ export const RECIPES: RecipeDef[] = [
   { id: 'craft_cheese_press', name: 'Cheese Press', resultId: 'cheese_press', resultQty: 1, ingredients: [{ itemId: 'wood', qty: 45 }, { itemId: 'stone', qty: 45 }, { itemId: 'copper_bar', qty: 1 }], isCooking: false, spriteIndex: 58 },
   { id: 'craft_mayo_machine', name: 'Mayo Machine', resultId: 'mayo_machine', resultQty: 1, ingredients: [{ itemId: 'wood', qty: 15 }, { itemId: 'stone', qty: 15 }, { itemId: 'copper_bar', qty: 1 }], isCooking: false, spriteIndex: 59 },
   { id: 'cook_pumpkin_soup', name: 'Pumpkin Soup', resultId: 'pumpkin_soup', resultQty: 1, ingredients: [{ itemId: 'pumpkin', qty: 1 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 47 },
-  { id: 'cook_blueberry_tart', name: 'Blueberry Tart', resultId: 'blueberry_tart', resultQty: 1, ingredients: [{ itemId: 'blueberry', qty: 3 }], isCooking: true, spriteIndex: 48 },
-  { id: 'cook_corn_chowder', name: 'Corn Chowder', resultId: 'corn_chowder', resultQty: 1, ingredients: [{ itemId: 'corn', qty: 2 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 49 },
+  { id: 'cook_blueberry_tart', name: 'Blueberry Tart', resultId: 'blueberry_tart', resultQty: 1, ingredients: [{ itemId: 'blueberry', qty: 1 }, { itemId: 'wheat_flour', qty: 1 }], isCooking: true, spriteIndex: 48 },
+  { id: 'cook_corn_chowder', name: 'Corn Chowder', resultId: 'corn_chowder', resultQty: 1, ingredients: [{ itemId: 'corn', qty: 1 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 49 },
+  { id: 'cook_berry_smoothie', name: 'Berry Smoothie', resultId: 'berry_smoothie', resultQty: 1, ingredients: [{ itemId: 'wild_berries', qty: 1 }, { itemId: 'milk', qty: 1 }], isCooking: true, spriteIndex: 111 },
+  { id: 'cook_grilled_salmon', name: 'Grilled Salmon', resultId: 'grilled_salmon', resultQty: 1, ingredients: [{ itemId: 'salmon', qty: 1 }], isCooking: true, spriteIndex: 112 },
+  { id: 'cook_honey_cake', name: 'Honey Cake', resultId: 'honey_cake', resultQty: 1, ingredients: [{ itemId: 'honey', qty: 1 }, { itemId: 'wheat_flour', qty: 1 }], isCooking: true, spriteIndex: 113 },
+  { id: 'cook_fruit_salad', name: 'Fruit Salad', resultId: 'fruit_salad', resultQty: 1, ingredients: [{ itemId: 'melon', qty: 1 }, { itemId: 'blueberry', qty: 1 }], isCooking: true, spriteIndex: 114 },
+  { id: 'cook_spicy_peppers', name: 'Spicy Peppers', resultId: 'spicy_peppers', resultQty: 1, ingredients: [{ itemId: 'tomato', qty: 1 }, { itemId: 'garlic', qty: 1 }], isCooking: true, spriteIndex: 115 },
+  { id: 'cook_cranberry_sauce', name: 'Cranberry Sauce', resultId: 'cranberry_sauce', resultQty: 1, ingredients: [{ itemId: 'cranberry', qty: 1 }], isCooking: true, spriteIndex: 116 },
+  { id: 'cook_fried_egg', name: 'Fried Egg', resultId: 'fried_egg', resultQty: 1, ingredients: [{ itemId: 'egg', qty: 1 }], isCooking: true, spriteIndex: 117 },
+  { id: 'cook_cheese_omelet', name: 'Cheese Omelet', resultId: 'cheese_omelet', resultQty: 1, ingredients: [{ itemId: 'egg', qty: 1 }, { itemId: 'cheese', qty: 1 }], isCooking: true, spriteIndex: 118 },
   { id: 'craft_quality_sprinkler', name: 'Quality Sprinkler', resultId: 'quality_sprinkler', resultQty: 1, ingredients: [{ itemId: 'iron_bar', qty: 1 }, { itemId: 'gold_bar', qty: 1 }], isCooking: false, spriteIndex: 60 },
 ];
 
@@ -184,6 +203,7 @@ export const FISH: FishDef[] = [
   { id: 'catfish', name: 'Catfish', seasons: [Season.SPRING, Season.FALL], locations: [MapId.FOREST], timeOfDay: [TimeOfDay.EVENING, TimeOfDay.NIGHT], difficulty: Difficulty.HARD, sellPrice: 200, spriteIndex: 35 },
   { id: 'tuna', name: 'Tuna', seasons: [Season.SUMMER, Season.WINTER], locations: [MapId.BEACH], timeOfDay: [TimeOfDay.MORNING, TimeOfDay.AFTERNOON], difficulty: Difficulty.MEDIUM, sellPrice: 100, spriteIndex: 36 },
   { id: 'legendary_fish', name: 'Legend', seasons: [Season.SPRING], locations: [MapId.FOREST], timeOfDay: [TimeOfDay.MORNING], difficulty: Difficulty.HARD, sellPrice: 5000, spriteIndex: 37 },
+  { id: 'bass', name: 'Bass', seasons: [Season.SPRING, Season.SUMMER, Season.FALL], locations: [MapId.FOREST, MapId.FARM], timeOfDay: [TimeOfDay.AFTERNOON, TimeOfDay.EVENING], difficulty: Difficulty.EASY, sellPrice: 90, spriteIndex: 109 },
 ];
 
 // ════════════════════════════════════════════════════════════
