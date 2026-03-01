@@ -54,7 +54,11 @@ export class PlayScene extends Phaser.Scene {
   objectLayer!: Phaser.GameObjects.Container;
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
-  foragingSprites: Phaser.GameObjects.Sprite[] = [];
+  foragingSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
+  private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
+  private dayNightOverlay?: Phaser.GameObjects.Rectangle;
+  private weatherParticleManager?: Phaser.GameObjects.Particles.ParticleEmitterManager;
+  private weatherParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
   fishingMinigame!: FishingMinigame;
   miningSystem!: MiningSystem;
   shopSystem!: ShopSystem;
@@ -110,7 +114,7 @@ export class PlayScene extends Phaser.Scene {
     this.tutorialStartY = this.player.y;
 
     // Camera follows player
-    this.cameras.main.startFollow(this.playerSprite, true, 0.1, 0.1);
+    this.cameras.main.startFollow(this.playerSprite, true, 0.08, 0.08);
     this.cameras.main.setZoom(1);
     this.cameras.main.setBounds(0, 0, FARM_WIDTH * SCALED_TILE, FARM_HEIGHT * SCALED_TILE);
 
@@ -156,19 +160,37 @@ export class PlayScene extends Phaser.Scene {
     this.miningSystem = new MiningSystem(this);
     this.shopSystem = new ShopSystem(this);
     this.weather = new WeatherSystem(this);
-    const initialWeather = this.weather.rollDailyWeather(this.calendar.season as any);
-    this.currentWeather = initialWeather;
-    this.weather.renderOverlay(initialWeather);
 
     // New systems
-    this.questSystem = new QuestSystem(this);
-    this.animalSystem = new AnimalSystem(this);
-    this.romanceSystem = new RomanceSystem(this);
-    this.upgradeSystem = new UpgradeSystem(this);
-    this.machineSystem = new MachineSystem(this);
-    this.achievementSystem = new AchievementSystem(this);
-    this.foragingSystem = new ForagingSystem();
-    this.festivalSystem = new FestivalSystem(this);
+    if (!this.questSystem) this.questSystem = new QuestSystem(this);
+    if (!this.animalSystem) this.animalSystem = new AnimalSystem(this);
+    if (!this.romanceSystem) this.romanceSystem = new RomanceSystem(this);
+    if (!this.upgradeSystem) this.upgradeSystem = new UpgradeSystem(this);
+    if (!this.machineSystem) this.machineSystem = new MachineSystem(this);
+    if (!this.achievementSystem) this.achievementSystem = new AchievementSystem(this);
+    if (!this.foragingSystem) this.foragingSystem = new ForagingSystem();
+    if (!this.festivalSystem) this.festivalSystem = new FestivalSystem(this);
+
+    const shouldRollInitialWeather = this.isNewGame;
+    if (shouldRollInitialWeather) {
+      this.currentWeather = this.weather.rollDailyWeather(this.calendar.season as any);
+    }
+    this.currentWeather = this.currentWeather || WeatherType.SUNNY;
+    this.weather.renderOverlay(this.currentWeather);
+    this.refreshWeatherParticles();
+    this.applySeasonalMapTint();
+    this.updateDayNightVisual();
+
+    if (this.foragingSystem.getState().items.length === 0) {
+      this.foragingSystem.onDayStart(
+        this.calendar.season as any,
+        FARM_WIDTH, FARM_HEIGHT,
+        (x: number, y: number) => {
+          const tile = this.getFarmTile(x, y);
+          return !tile || tile.type !== TileType.GRASS || !!tile.cropId;
+        }
+      );
+    }
     this.renderForageables();
 
     // Emit day start
@@ -204,6 +226,9 @@ export class PlayScene extends Phaser.Scene {
         [InteractionKind.DOOR]: 'Press E — Enter Mine',
         [InteractionKind.QUEST_BOARD]: 'Press E — Quests',
         [InteractionKind.NPC]: 'Press E — Talk',
+        [InteractionKind.BLACKSMITH]: 'Press E — Upgrade Tools',
+        [InteractionKind.CARPENTER]: 'Press E — Upgrade House',
+        [InteractionKind.FORAGEABLE]: 'Press E — Collect',
       };
       this.proximityPrompt!.setText(kindLabels[interaction.kind] || 'Press E');
       this.proximityPrompt!.setVisible(true);
@@ -211,6 +236,7 @@ export class PlayScene extends Phaser.Scene {
       this.proximityPrompt!.setVisible(false);
     }
     this.updateDayTimer(delta);
+    this.updateDayNightVisual();
     this.updateCropSprites();
     this.playerSprite.setDepth(ySortDepth(this.player.y));
 
@@ -852,14 +878,26 @@ export class PlayScene extends Phaser.Scene {
             this.events.emit(Events.TOAST, { message: 'Not enough gold', color: '#ff4444' });
             break;
           }
+          if (this.countItem(info.materialId) < info.materialQty) {
+            this.events.emit(Events.TOAST, {
+              message: `Need ${info.materialQty}x ${info.materialId.replace(/_/g, ' ')}`,
+              color: '#ff4444'
+            });
+            break;
+          }
 
-          const started = this.upgradeSystem.startToolUpgrade(tool, this.player.gold, () => true);
+          const started = this.upgradeSystem.startToolUpgrade(
+            tool,
+            this.player.gold,
+            (id, qty) => this.countItem(id) >= qty
+          );
           if (!started) {
             this.events.emit(Events.TOAST, { message: 'Unable to start tool upgrade.', color: '#ff4444' });
             break;
           }
-          this.player.gold -= info.cost;
-          this.events.emit(Events.GOLD_CHANGE, { amount: -info.cost, newTotal: this.player.gold });
+          this.player.gold -= started.cost;
+          this.removeItem(started.materialId, started.materialQty);
+          this.events.emit(Events.GOLD_CHANGE, { amount: -started.cost, newTotal: this.player.gold });
           const pending = this.upgradeSystem.getState().pendingUpgrade;
           if (pending) {
             const ready = this.getFutureDate(started.daysToComplete);
@@ -881,22 +919,19 @@ export class PlayScene extends Phaser.Scene {
             this.events.emit(Events.TOAST, { message: 'Not enough gold', color: '#ff4444' });
             break;
           }
-
-          const started = this.upgradeSystem.startHouseUpgrade(this.house.tier, this.player.gold, () => true);
-          if (!started) {
-            this.events.emit(Events.TOAST, { message: 'Unable to start house upgrade.', color: '#ff4444' });
+          if (this.countItem(nextUpgrade.materialId) < nextUpgrade.materialQty) {
+            this.events.emit(Events.TOAST, {
+              message: `Need ${nextUpgrade.materialQty}x ${nextUpgrade.materialId.replace(/_/g, ' ')}`,
+              color: '#ff4444'
+            });
             break;
           }
           this.player.gold -= nextUpgrade.cost;
+          this.removeItem(nextUpgrade.materialId, nextUpgrade.materialQty);
           this.events.emit(Events.GOLD_CHANGE, { amount: -nextUpgrade.cost, newTotal: this.player.gold });
-          const pending = this.upgradeSystem.getState().houseUpgradePending;
-          if (pending) {
-            const ready = this.getFutureDate(nextUpgrade.daysToComplete);
-            pending.readyDay = ready.day;
-            pending.readySeason = ready.season;
-            pending.readyYear = ready.year;
-          }
-          this.events.emit(Events.TOAST, { message: `${nextUpgrade.name} started!`, color: '#44ffaa' });
+          this.house.tier += 1;
+          this.events.emit(Events.BUILDING_UPGRADE, { buildingType: 'house', newLevel: this.house.tier });
+          this.events.emit(Events.TOAST, { message: `${nextUpgrade.name} complete!`, color: '#44ffaa' });
           break;
         }
 
@@ -905,12 +940,32 @@ export class PlayScene extends Phaser.Scene {
           break;
 
         case InteractionKind.FORAGEABLE: {
-          const foraged = this.foragingSystem.collect(data.x, data.y);
-          if (foraged) {
-            this.addToInventory(foraged, 1);
-            this.events.emit(Events.TOAST, { message: `Found ${foraged.replace(/_/g, ' ')}!`, color: '#88ff44' });
-            this.renderForageables();
+          let forageId = data.targetId;
+          if (!forageId) {
+            const fallback = this.foragingSystem.getAt(data.x, data.y);
+            forageId = fallback?.id;
           }
+          if (!forageId) break;
+
+          const target = this.foragingSystem.getState().items.find((i) => i.id === forageId);
+          if (!target) break;
+
+          const foraged = this.foragingSystem.collect(target.tileX, target.tileY);
+          if (!foraged) break;
+
+          const added = this.addToInventory(foraged, 1);
+          if (!added) {
+            this.events.emit(Events.TOAST, { message: 'Inventory full!', color: '#ff4444' });
+            break;
+          }
+
+          const spr = this.foragingSprites.get(forageId);
+          if (spr) spr.destroy();
+          this.foragingSprites.delete(forageId);
+
+          const itemDef = ITEMS.find((i) => i.id === foraged);
+          const itemName = itemDef?.name ?? foraged.replace(/_/g, ' ');
+          this.events.emit(Events.TOAST, { message: `Found ${itemName}!`, color: '#88ff44' });
           break;
         }
 
@@ -1105,8 +1160,8 @@ export class PlayScene extends Phaser.Scene {
     this.createInteractable(28, 23, 4, InteractionKind.SHOP);
     this.createInteractable(35, 4, 5, InteractionKind.DOOR);
     this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
-    this.createInteractable(10, 23, 'Owen\'s Forge', InteractionKind.BLACKSMITH);
-    this.createInteractable(22, 23, 'Carpenter', InteractionKind.CARPENTER);
+    this.createInteractable(17, 22, 7, InteractionKind.BLACKSMITH);
+    this.createInteractable(10, 23, 7, InteractionKind.CARPENTER);
   
     this.addLabel(27, 12, 'Shipping Bin');
     this.addLabel(12, 16, 'Crafting Bench');
@@ -1115,12 +1170,14 @@ export class PlayScene extends Phaser.Scene {
     this.addLabel(28, 23, 'Shop');
     this.addLabel(35, 4, 'Mine Entrance');
     this.addLabel(15, 23, 'Quest Board');
+    this.addLabel(17, 22, 'Owen\'s Forge');
+    this.addLabel(10, 23, 'Carpenter');
   }
 
   private createInteractable(tileX: number, tileY: number, frameOrLabel: number | string, kind: InteractionKind) {
     const frameByKind: Partial<Record<InteractionKind, number>> = {
-      [InteractionKind.BLACKSMITH]: 4,
-      [InteractionKind.CARPENTER]: 6,
+      [InteractionKind.BLACKSMITH]: 7,
+      [InteractionKind.CARPENTER]: 7,
     };
     const frame = typeof frameOrLabel === 'number' ? frameOrLabel : (frameByKind[kind] ?? 0);
     const label = typeof frameOrLabel === 'string' ? frameOrLabel : null;
