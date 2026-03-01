@@ -16,7 +16,32 @@ export class BootScene extends Phaser.Scene {
     this.generateAllTextures();
   }
 
-  create() { this.scene.start(Scenes.MENU); }
+  create() {
+    // Player animations (4 frames: 0=down, 1=up, 2=left, 3=right)
+    // Since we only have 1 frame per direction, idle and walk use the same frame
+    const dirs = [
+      { dir: 'down', frame: 0 },
+      { dir: 'up', frame: 1 },
+      { dir: 'left', frame: 2 },
+      { dir: 'right', frame: 3 },
+    ];
+    for (const { dir, frame } of dirs) {
+      this.anims.create({
+        key: `idle_${dir}`,
+        frames: [{ key: 'player', frame }],
+        frameRate: 1,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: `walk_${dir}`,
+        frames: [{ key: 'player', frame }],
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    this.scene.start(Scenes.MENU);
+  }
 
   private generateAllTextures() {
     const T = TILE_SIZE;
@@ -31,6 +56,9 @@ export class BootScene extends Phaser.Scene {
     this.genTools(T);
     this.genAnimals(T);
     this.genMonsters(T);
+    this.genHouseComposite(T);
+    this.genTreeComposite(T);
+    this.genFenceComposite(T);
   }
 
   private genPlayer(T: number) {
@@ -51,6 +79,8 @@ export class BootScene extends Phaser.Scene {
       else { g.fillRect(ox+10,3,1,1); }
     }
     g.generateTexture('player', T*4, T); g.destroy();
+    const pTex = this.textures.get('player');
+    for (let i = 0; i < 4; i++) pTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genTerrain(T: number) {
@@ -100,6 +130,8 @@ export class BootScene extends Phaser.Scene {
       }
     }
     g.generateTexture('terrain', T*16, T); g.destroy();
+    const tTex = this.textures.get('terrain');
+    for (let i = 0; i < 16; i++) tTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genCrops(T: number) {
@@ -118,6 +150,12 @@ export class BootScene extends Phaser.Scene {
       }
     }
     g.generateTexture('crops', T*6, T*15); g.destroy();
+    const cTex = this.textures.get('crops');
+    for (let row = 0; row < 15; row++) {
+      for (let col = 0; col < 6; col++) {
+        cTex.add(row * 6 + col, 0, col * T, row * T, T, T);
+      }
+    }
   }
 
   private genItems(T: number) {
@@ -137,6 +175,12 @@ export class BootScene extends Phaser.Scene {
       else { g.fillStyle(c); g.fillRect(ox+3,oy+3,10,10); g.fillStyle(0x222222); g.fillRect(ox+5,oy+5,6,6); g.fillStyle(c); g.fillRect(ox+6,oy+6,4,4); }
     }
     g.generateTexture('items', T*8, T*8); g.destroy();
+    const iTex = this.textures.get('items');
+    for (let i = 0; i < 64; i++) {
+      const col = i % 8;
+      const row = Math.floor(i / 8);
+      iTex.add(i, 0, col * T, row * T, T, T);
+    }
   }
 
   private genObjects(T: number) {
@@ -171,6 +215,8 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x87CEEB); g.fillRect(ox+2,7,3,3); g.fillRect(ox+11,7,3,3);
 
     g.generateTexture('objects', T*8, T); g.destroy();
+    const oTex = this.textures.get('objects');
+    for (let i = 0; i < 8; i++) oTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genNPCs(T: number) {
@@ -193,6 +239,8 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0x222222); g.fillRect(ox+6,3,1,1); g.fillRect(ox+9,3,1,1);
     }
     g.generateTexture('npcs', T*10, T); g.destroy();
+    const nTex = this.textures.get('npcs');
+    for (let i = 0; i < 10; i++) nTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genPortraits() {
@@ -216,12 +264,16 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0xCC8866); g.fillRect(ox+19,27,10,2);
     }
     g.generateTexture('portraits', 480, 48); g.destroy();
+    const prTex = this.textures.get('portraits');
+    for (let i = 0; i < 10; i++) prTex.add(i, 0, i * 48, 0, 48, 48);
   }
 
   private genUIIcons(T: number) {
     const g = this.make.graphics();
     for (let i=0; i<16; i++) { const ox=i*T; g.fillStyle(0x333344); g.fillRect(ox,0,T,T); g.fillStyle(0x888899); g.fillRect(ox+2,2,T-4,T-4); }
     g.generateTexture('ui_icons', T*16, T); g.destroy();
+    const uTex = this.textures.get('ui_icons');
+    for (let i = 0; i < 16; i++) uTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genTools(T: number) {
@@ -239,6 +291,8 @@ export class BootScene extends Phaser.Scene {
     // 5: Scythe
     ox=T*5; g.fillStyle(0x8B6914); g.fillRect(ox+7,4,2,10); g.fillStyle(0xBBBBBB); g.fillRect(ox+2,2,8,2); g.fillRect(ox+2,4,2,3);
     g.generateTexture('tools', T*6, T); g.destroy();
+    const tlTex = this.textures.get('tools');
+    for (let i = 0; i < 6; i++) tlTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genAnimals(T: number) {
@@ -252,6 +306,8 @@ export class BootScene extends Phaser.Scene {
       g.fillStyle(0x8B6914); g.fillRect(ox+5,12,2,4); g.fillRect(ox+9,12,2,4);
     }
     g.generateTexture('animals', T*5, T); g.destroy();
+    const aTex = this.textures.get('animals');
+    for (let i = 0; i < 5; i++) aTex.add(i, 0, i * T, 0, T, T);
   }
 
   private genMonsters(T: number) {
@@ -267,5 +323,81 @@ export class BootScene extends Phaser.Scene {
     ox=T*2; g.fillStyle(0x888888); g.fillRect(ox+3,4,10,10); g.fillStyle(0xAAAAAA); g.fillRect(ox+4,3,8,4);
     g.fillStyle(0xFF4444); g.fillRect(ox+5,5,2,2); g.fillRect(ox+9,5,2,2);
     g.generateTexture('monsters', T*3, T); g.destroy();
+    const mTex = this.textures.get('monsters');
+    for (let i = 0; i < 3; i++) mTex.add(i, 0, i * T, 0, T, T);
+  }
+
+  private genHouseComposite(T: number) {
+    const g = this.make.graphics();
+    const W = T * 5;
+    const H = T * 4;
+
+    g.fillStyle(0x8B6914); g.fillRect(0, H - 4, W, 4);
+    g.fillStyle(0xD2B48C); g.fillRect(4, 20, W - 8, H - 24);
+    g.fillStyle(0xC4A882);
+    for (let y = 24; y < H - 4; y += 6) g.fillRect(6, y, W - 12, 1);
+
+    g.fillStyle(0xCC4444);
+    g.fillTriangle(W / 2, 0, -4, 22, W + 4, 22);
+    g.fillStyle(0xAA3333);
+    g.fillTriangle(W / 2, 0, -4, 22, W / 2, 22);
+    g.fillStyle(0x8B2222); g.fillRect(-4, 20, W + 8, 3);
+
+    g.fillStyle(0x5C3A21); g.fillRect(W / 2 - 6, H - 22, 12, 18);
+    g.fillStyle(0x4A2E18); g.fillRect(W / 2 - 4, H - 20, 8, 16);
+    g.fillStyle(0xFFD700); g.fillRect(W / 2 + 2, H - 12, 2, 2);
+
+    g.fillStyle(0x87CEEB);
+    g.fillRect(10, 28, 12, 10);
+    g.fillRect(W - 22, 28, 12, 10);
+    g.fillStyle(0x5C3A21);
+    g.fillRect(10, 32, 12, 1);
+    g.fillRect(15, 28, 1, 10);
+    g.fillRect(W - 22, 32, 12, 1);
+    g.fillRect(W - 17, 28, 1, 10);
+
+    g.fillStyle(0x888888); g.fillRect(W - 18, 2, 8, 20);
+    g.fillStyle(0x666666); g.fillRect(W - 18, 2, 8, 2);
+
+    g.generateTexture('house', W, H);
+    g.destroy();
+  }
+
+  private genTreeComposite(T: number) {
+    const g = this.make.graphics();
+    const W = T * 2;
+    const H = T * 3;
+
+    g.fillStyle(0x6B4226); g.fillRect(12, 24, 8, 24);
+    g.fillStyle(0x8B5A2B); g.fillRect(14, 26, 4, 20);
+
+    g.fillStyle(0x2D6B2D);
+    g.fillRect(2, 18, 28, 10);
+    g.fillStyle(0x3A8B3A);
+    g.fillRect(4, 10, 24, 12);
+    g.fillStyle(0x4AAE4A);
+    g.fillRect(6, 4, 20, 12);
+    g.fillStyle(0x5DC85D);
+    g.fillRect(10, 0, 12, 8);
+
+    g.fillStyle(0x6BDB6B);
+    g.fillRect(12, 2, 4, 3);
+    g.fillRect(8, 8, 3, 3);
+    g.fillRect(18, 6, 3, 2);
+
+    g.generateTexture('tree', W, H);
+    g.destroy();
+  }
+
+  private genFenceComposite(T: number) {
+    const g = this.make.graphics();
+
+    g.fillStyle(0x8B6914); g.fillRect(6, 2, 4, 14);
+    g.fillStyle(0xA0822C); g.fillRect(0, 4, T, 3);
+    g.fillStyle(0xA0822C); g.fillRect(0, 10, T, 3);
+    g.fillStyle(0xBB9944); g.fillRect(6, 1, 4, 2);
+
+    g.generateTexture('fence', T, T);
+    g.destroy();
   }
 }

@@ -80,9 +80,9 @@ export class PlayScene extends Phaser.Scene {
     // Create tilemap from farm tiles
     this.createFarmMap();
 
-    // Create player sprite (48x48 real spritesheet, scale=1 since frames are already 48px ≈ SCALED_TILE)
+    // Create player sprite
     this.playerSprite = this.add.sprite(this.player.x, this.player.y, 'player', 0);
-    this.playerSprite.setScale(1);
+    this.playerSprite.setScale(SCALE);
     this.playerSprite.setDepth(ySortDepth(this.player.y));
     this.playerSprite.play('idle_down');
     this.tutorialStartX = this.player.x;
@@ -794,65 +794,81 @@ export class PlayScene extends Phaser.Scene {
 
   private createWorldObjects() {
     this.objectLayer = this.add.container(0, 0);
-
-    // Use the existing house frame from objects sheet and scale it up as a landmark.
+  
+    // House using composite texture
     const housePos = gridToWorld(20, 7);
-    const house = this.add.sprite(housePos.x, housePos.y - 24, 'objects', 7);
-    house.setScale(SCALE * 2.4);
+    const house = this.add.sprite(housePos.x, housePos.y - SCALED_TILE * 0.5, 'house');
+    house.setScale(SCALE * 1.8);
     house.setDepth(ySortDepth(housePos.y) - 1);
     this.objectLayer.add(house);
-
-    // Place edge trees using the WOOD terrain tile as a tree landmark.
-    for (let tx = 0; tx < FARM_WIDTH; tx += 3) {
-      const topPos = gridToWorld(tx, 1);
-      const topTree = this.add.sprite(topPos.x, topPos.y - SCALED_TILE * 0.45, 'terrain', TileType.WOOD);
-      topTree.setScale(SCALE * 1.2);
-      topTree.setDepth(ySortDepth(topPos.y));
-      this.objectLayer.add(topTree);
-
-      const bottomPos = gridToWorld(tx, 28);
-      const bottomTree = this.add.sprite(bottomPos.x, bottomPos.y - SCALED_TILE * 0.45, 'terrain', TileType.WOOD);
-      bottomTree.setScale(SCALE * 1.2);
-      bottomTree.setDepth(ySortDepth(bottomPos.y));
-      this.objectLayer.add(bottomTree);
+    this.addLabel(20, 5, 'Home');
+  
+    // Trees around map edges using composite texture
+    const treePositions = [
+      // Top edge
+      [2, 1], [5, 0], [8, 1], [12, 0], [15, 1], [33, 0], [36, 1], [38, 0],
+      // Bottom edge
+      [2, 28], [6, 29], [10, 28], [14, 29], [33, 28], [36, 29], [38, 28],
+      // Left edge
+      [0, 5], [1, 10], [0, 16], [1, 22],
+      // Right edge
+      [39, 5], [38, 12], [39, 18], [38, 24],
+      // Scattered decorative
+      [5, 5], [7, 3], [34, 6], [36, 10],
+    ];
+    for (const [tx, ty] of treePositions) {
+      const tPos = gridToWorld(tx, ty);
+      const tree = this.add.sprite(tPos.x, tPos.y - SCALED_TILE * 0.6, 'tree');
+      tree.setScale(SCALE * 0.8);
+      tree.setDepth(ySortDepth(tPos.y));
+      this.objectLayer.add(tree);
     }
-
-    // Fences around farm area.
-    for (let fx = 9; fx <= 29; fx++) {
-      for (const fy of [9, 15]) {
-        if ((fx === 21 || fx === 22) && (fy === 9 || fy === 15)) continue;
-        const fencePos = gridToWorld(fx, fy);
-        const fence = this.add.sprite(fencePos.x, fencePos.y, 'terrain', TileType.WOOD);
+  
+    // Fence border around farm plot using composite texture
+    // Farm area: roughly tiles 10-28, 10-20
+    for (let fx = 10; fx <= 28; fx++) {
+      for (const fy of [10, 20]) {
+        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
+        const fPos = gridToWorld(fx, fy);
+        const fence = this.add.sprite(fPos.x, fPos.y, 'fence');
         fence.setScale(SCALE);
-        fence.setDepth(ySortDepth(fencePos.y));
+        fence.setDepth(ySortDepth(fPos.y));
         this.objectLayer.add(fence);
       }
     }
-    for (let fy = 10; fy <= 14; fy++) {
-      for (const fx of [9, 29]) {
-        const fencePos = gridToWorld(fx, fy);
-        const fence = this.add.sprite(fencePos.x, fencePos.y, 'terrain', TileType.WOOD);
+    for (let fy = 11; fy <= 19; fy++) {
+      for (const fx of [10, 28]) {
+        const fPos = gridToWorld(fx, fy);
+        const fence = this.add.sprite(fPos.x, fPos.y, 'fence');
         fence.setScale(SCALE);
-        fence.setDepth(ySortDepth(fencePos.y));
+        fence.setDepth(ySortDepth(fPos.y));
         this.objectLayer.add(fence);
       }
     }
-
-    this.createInteractable(20, 8, 2, InteractionKind.BED);
+  
+    // Farm plot label
+    const farmCenter = gridToWorld(19, 15);
+    this.add.text(farmCenter.x, farmCenter.y - SCALED_TILE, '🌱 Farm Plot', {
+      fontSize: '12px', color: '#a8d5a3', fontFamily: 'monospace',
+      backgroundColor: '#00000066', padding: { x: 4, y: 2 },
+    }).setOrigin(0.5).setDepth(500);
+  
+    // Interactable objects with labels
+    this.createInteractable(21, 8, 2, InteractionKind.BED);
     this.createInteractable(19, 8, 3, InteractionKind.KITCHEN);
-    this.createInteractable(16, 9, 1, InteractionKind.CRAFTING_BENCH);
-    this.createInteractable(25, 8, 0, InteractionKind.SHIPPING_BIN);
-    this.createInteractable(30, 16, 4, InteractionKind.SHOP);
+    this.createInteractable(14, 11, 1, InteractionKind.CRAFTING_BENCH);
+    this.createInteractable(26, 11, 0, InteractionKind.SHIPPING_BIN);
+    this.createInteractable(32, 16, 4, InteractionKind.SHOP);
     this.createInteractable(35, 4, 5, InteractionKind.DOOR);
-    this.createInteractable(28, 16, 6, InteractionKind.QUEST_BOARD);
-
-    this.addLabel(25, 8, 'Shipping Bin');
-    this.addLabel(16, 9, 'Crafting Bench');
-    this.addLabel(20, 8, 'Bed');
+    this.createInteractable(32, 14, 6, InteractionKind.QUEST_BOARD);
+  
+    this.addLabel(26, 11, 'Shipping Bin');
+    this.addLabel(14, 11, 'Crafting Bench');
+    this.addLabel(21, 8, 'Bed');
     this.addLabel(19, 8, 'Kitchen');
-    this.addLabel(30, 16, 'Shop');
-    this.addLabel(35, 4, 'Mine');
-    this.addLabel(28, 16, 'Quest Board');
+    this.addLabel(32, 16, 'Shop');
+    this.addLabel(35, 4, 'Mine Entrance');
+    this.addLabel(32, 14, 'Quest Board');
   }
 
   private createInteractable(tileX: number, tileY: number, frame: number, kind: InteractionKind) {
@@ -866,11 +882,11 @@ export class PlayScene extends Phaser.Scene {
 
   private spawnNPCs() {
     const npcPositions: Record<string, { x: number; y: number }> = {
-      elena: { x: 30, y: 17 },  // near shop
-      owen: { x: 28, y: 17 },   // near quest board
-      lily: { x: 10, y: 24 },   // near pond
-      marcus: { x: 35, y: 5 },  // near mine
-      sage: { x: 16, y: 20 },   // town path
+      elena: { x: 32, y: 17 },   // at the shop
+      owen: { x: 32, y: 13 },    // near quest board
+      lily: { x: 6, y: 20 },     // near the pond area
+      marcus: { x: 35, y: 5 },   // at the mine
+      sage: { x: 15, y: 25 },    // southern path
     };
 
     for (const npc of NPCS) {
@@ -883,6 +899,12 @@ export class PlayScene extends Phaser.Scene {
       spr.setDepth(ySortDepth(pos.y));
       spr.setData('interaction', { kind: InteractionKind.NPC, targetId: npc.id, x, y });
       this.npcSprites.set(npc.id, spr);
+
+      // NPC name label
+      const label = this.add.text(pos.x, pos.y - SCALED_TILE * 0.7, npc.name, {
+        fontSize: '9px', color: '#ffffff', fontFamily: 'monospace',
+        backgroundColor: '#00000088', padding: { x: 2, y: 1 },
+      }).setOrigin(0.5).setDepth(ySortDepth(pos.y) + 1);
     }
   }
 

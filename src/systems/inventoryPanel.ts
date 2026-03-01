@@ -25,7 +25,7 @@ export class InventoryPanel {
 
   private readonly cols = 6;
   private readonly rows = 6;
-  private readonly slotSize = 44;
+  private readonly slotSize = 36;
   private readonly gap = 4;
 
   private readonly itemById = new Map(ITEMS.map((item) => [item.id, item]));
