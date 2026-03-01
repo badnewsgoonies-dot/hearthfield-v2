@@ -25,6 +25,11 @@ import { AchievementSystem, AchievementState } from '../systems/achievements';
 import { ForagingSystem, ForagingState } from '../systems/foraging';
 import { FestivalSystem } from '../systems/festivals';
 import { StorySystem, StoryFlags } from '../systems/story';
+import { SeasonRenderer } from '../systems/seasonRenderer';
+import { ForageRenderer } from '../systems/forageRenderer';
+import { NPCScheduleSystem } from '../systems/npcSchedules';
+import { AchievementPanel } from '../systems/achievementPanel';
+import { ACHIEVEMENTS } from '../data/achievementData';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -57,6 +62,10 @@ export class PlayScene extends Phaser.Scene {
   npcSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   cropSprites: Map<string, Phaser.GameObjects.Sprite> = new Map();
   foragingSprites: Phaser.GameObjects.Sprite[] = [];
+  forageRenderer!: ForageRenderer;
+  achievementPanel!: AchievementPanel;
+  treeSprites: Phaser.GameObjects.Sprite[] = [];
+  npcLabels: Map<string, Phaser.GameObjects.Text> = new Map();
   farmAnimalSprites: { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; targetX: number; targetY: number; timer: number }[] = [];
   solidTiles: Set<string> = new Set();
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
@@ -152,6 +161,8 @@ export class PlayScene extends Phaser.Scene {
       eight: this.input.keyboard!.addKey('EIGHT'),
       nine: this.input.keyboard!.addKey('NINE'),
       zero: this.input.keyboard!.addKey('ZERO'),
+      t: this.input.keyboard!.addKey('T'),            // achievements
+      c: this.input.keyboard!.addKey('C'),            // crafting
     };
 
     this.proximityPrompt = this.add.text(0, 0, '', {
@@ -178,6 +189,12 @@ export class PlayScene extends Phaser.Scene {
     if (!this.foragingSystem) this.foragingSystem = new ForagingSystem();
     if (!this.storySystem) this.storySystem = new StorySystem(this);
     if (!this.festivalSystem) this.festivalSystem = new FestivalSystem(this);
+
+    // Renderer systems
+    this.forageRenderer = new ForageRenderer(this);
+    this.achievementPanel = new AchievementPanel({
+      scene: this, x: 100, y: 100, width: 600, height: 400,
+    });
 
     const shouldRollInitialWeather = this.isNewGame;
     if (shouldRollInitialWeather) {
@@ -253,6 +270,7 @@ export class PlayScene extends Phaser.Scene {
     this.updateDayTimer(delta);
     this.updateFarmAnimals(delta);
     this.updateDayNightVisual();
+    this.updateNPCPositions();
     this.updateCropSprites();
     this.playerSprite.setDepth(ySortDepth(this.player.y));
 
@@ -517,7 +535,19 @@ export class PlayScene extends Phaser.Scene {
 
     // ESC = pause
     if (Phaser.Input.Keyboard.JustDown(this.keys.esc)) {
-      this.events.emit(Events.OPEN_PAUSE);
+      if (this.achievementPanel.isVisible()) {
+        this.achievementPanel.hide();
+      } else {
+        this.events.emit(Events.OPEN_PAUSE);
+      }
+    }
+
+    // T = achievements
+    if (Phaser.Input.Keyboard.JustDown(this.keys.t)) {
+      this.achievementPanel.toggle(
+        this.achievementSystem.getUnlocked(),
+        ACHIEVEMENTS
+      );
     }
   }
 
@@ -615,6 +645,8 @@ export class PlayScene extends Phaser.Scene {
         this.calendar.season = seasons[idx + 1];
       }
       this.events.emit(Events.SEASON_CHANGE, { oldSeason, newSeason: this.calendar.season, year: this.calendar.year });
+      this.applySeasonVisuals();
+      this.applySeasonalMapTint();
     }
 
     if (this.weather.getCropGrowthBonus(this.currentWeather)) {
@@ -1109,6 +1141,7 @@ export class PlayScene extends Phaser.Scene {
             spr.destroy();
             this.foragingSprites = this.foragingSprites.filter(s => s !== spr);
           }
+          this.forageRenderer.removeItem(forageId);
 
           const itemDef = ITEMS.find((i) => i.id === foraged);
           const itemName = itemDef?.name ?? foraged.replace(/_/g, ' ');
@@ -1304,7 +1337,10 @@ export class PlayScene extends Phaser.Scene {
       tree.setScale(SCALE * 0.8);
       tree.setDepth(ySortDepth(tPos.y));
       this.objectLayer.add(tree);
+      this.treeSprites.push(tree);
+      tree.setData('gridPos', { x: tx, y: ty });
     }
+    this.applySeasonVisuals();
   
     // Fence border around farm plot using composite texture
     // Farm area: roughly tiles 10-28, 10-20
@@ -1445,20 +1481,13 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private spawnNPCs() {
-    const npcPositions: Record<string, { x: number; y: number }> = {
-      elena: { x: 30, y: 23 },   // near the shop in town
-      owen: { x: 17, y: 23 },    // near quest board in town
-      lily: { x: 6, y: 20 },     // near the pond
-      marcus: { x: 35, y: 5 },   // at the mine
-      sage: { x: 18, y: 22 },
-      rose: { x: 24, y: 23 },    // town square, near Elena
-      finn: { x: 8, y: 22 },     // by the water/beach
-    };
-
+    // Use schedule system for initial positions
+    const hour = Math.floor(this.calendar.timeOfDay * 24); // timeOfDay is 0-1
+    const dayOfWeek = this.calendar.day % 7;
     for (const npc of NPCS) {
-      const posDef = npcPositions[npc.id] ?? { x: 20, y: 20 };
-      const x = posDef.x;
-      const y = posDef.y;
+      const sched = NPCScheduleSystem.getPosition(npc.id, hour, 0, this.calendar.season, dayOfWeek);
+      const x = sched.tileX;
+      const y = sched.tileY;
       const pos = gridToWorld(x, y);
       const spr = this.add.sprite(pos.x, pos.y, 'npcs', npc.spriteIndex);
       spr.setScale(SCALE);
@@ -1471,6 +1500,28 @@ export class PlayScene extends Phaser.Scene {
         fontSize: '9px', color: '#ffffff', fontFamily: 'monospace',
         backgroundColor: '#00000088', padding: { x: 2, y: 1 },
       }).setOrigin(0.5).setDepth(ySortDepth(pos.y) + 1);
+      this.npcLabels.set(npc.id, label);
+    }
+  }
+
+  private updateNPCPositions() {
+    const hour = Math.floor(this.calendar.timeOfDay * 24); // timeOfDay is 0-1
+    const dayOfWeek = this.calendar.day % 7;
+    for (const npc of NPCS) {
+      const spr = this.npcSprites.get(npc.id);
+      const label = this.npcLabels.get(npc.id);
+      if (!spr) continue;
+      const sched = NPCScheduleSystem.getPosition(npc.id, hour, 0, this.calendar.season, dayOfWeek);
+      const target = gridToWorld(sched.tileX, sched.tileY);
+      // Smooth lerp toward target position
+      spr.x += (target.x - spr.x) * 0.02;
+      spr.y += (target.y - spr.y) * 0.02;
+      spr.setDepth(ySortDepth(spr.y));
+      spr.setData('interaction', { kind: InteractionKind.NPC, targetId: npc.id, x: sched.tileX, y: sched.tileY });
+      if (label) {
+        label.setPosition(spr.x, spr.y - SCALED_TILE * 0.7);
+        label.setDepth(ySortDepth(spr.y) + 1);
+      }
     }
   }
 
@@ -1790,18 +1841,29 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
+  private applySeasonVisuals() {
+    const palette = SeasonRenderer.getPalette(this.calendar.season);
+    for (const tree of this.treeSprites) {
+      const gp = tree.getData('gridPos') as { x: number; y: number } | undefined;
+      if (!gp) continue;
+      const info = SeasonRenderer.getRandomTree(this.calendar.season, gp.x, gp.y);
+      if (info.hasLeaves) {
+        tree.setTint(info.leafColor);
+        tree.setAlpha(1);
+      } else {
+        // Bare tree in winter — show trunk only
+        tree.setTint(palette.treeTrunk);
+        tree.setAlpha(0.7);
+      }
+    }
+  }
+
   private applySeasonalMapTint() {
     const { width, height } = this.cameras.main;
     if (this.seasonalTintOverlay) this.seasonalTintOverlay.destroy();
-    const tints: Record<string, number> = {
-      [Season.SPRING]: 0x88ff88,
-      [Season.SUMMER]: 0xffffaa,
-      [Season.FALL]: 0xffcc88,
-      [Season.WINTER]: 0xaaccff,
-    };
-    const color = tints[this.calendar.season] ?? 0xffffff;
+    const palette = SeasonRenderer.getPalette(this.calendar.season);
     this.seasonalTintOverlay = this.add.rectangle(
-      width / 2, height / 2, width, height, color, 0.06
+      width / 2, height / 2, width, height, palette.ambient, palette.ambientAlpha
     );
     this.seasonalTintOverlay.setScrollFactor(0);
     this.seasonalTintOverlay.setDepth(9990);
@@ -1825,27 +1887,27 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private renderForageables() {
-    for (const sprite of this.foragingSprites) {
-      sprite.destroy();
-    }
+    // Clear old sprite-based forageables
+    for (const sprite of this.foragingSprites) sprite.destroy();
     this.foragingSprites = [];
 
+    // Use the procedural ForageRenderer
     const forageItems = this.foragingSystem.getState().items;
+    this.forageRenderer.renderItems(forageItems, this.calendar.season);
+
+    // Also register as interactables for the proximity system
     for (const item of forageItems) {
       const pos = gridToWorld(item.tileX, item.tileY);
-      const itemDef = ITEMS.find((i) => i.id === item.itemId);
-      const sprite = this.add.sprite(pos.x, pos.y, 'items', itemDef?.spriteIndex ?? 0);
-      sprite.setScale(SCALE);
-      sprite.setDepth(ySortDepth(pos.y));
-      sprite.setData('interaction', {
+      const dummy = this.add.zone(pos.x, pos.y, SCALED_TILE, SCALED_TILE);
+      dummy.setData('interaction', {
         kind: InteractionKind.FORAGEABLE,
         label: item.itemId,
         data: item,
         x: item.tileX,
-        y: item.tileY
+        y: item.tileY,
       });
-      this.objectLayer.add(sprite);
-      this.foragingSprites.push(sprite);
+      this.objectLayer.add(dummy);
+      this.foragingSprites.push(dummy as any);
     }
   }
 
