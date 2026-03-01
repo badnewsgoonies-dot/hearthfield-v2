@@ -1,28 +1,40 @@
 # Hearthfield V2 — Build Manifest
 
-## Current Phase: Phase 2 (Spec Writing)
+## Current Phase: Phase 6 Complete (Integration)
 
 ## Domain List
-| Domain | Owner | Status |
-|--------|-------|--------|
-| foraging-render | worker-1 | pending |
-| season-visuals | worker-2 | pending |
-| achievement-ui | worker-3 | pending |
-| festival-events | worker-4 | pending |
-| machine-placement | worker-5 | pending |
-| integration | orchestrator | pending |
+| Domain | Owner | Status | LOC |
+|--------|-------|--------|-----|
+| season-renderer | worker-1 | ✅ integrated | 79 |
+| forage-renderer | worker-2 | ✅ integrated | 163 |
+| achievement-panel | worker-3 | ✅ integrated | 166 |
+| npc-schedules | worker-4 | ✅ integrated | 127 |
+
+## Validation
+- tsc: 0 errors
+- Scope violations: 0/4 workers
+- Total: 42 files, 13,301 LOC
 
 ## Key Constants
 - Tile: 16px base, 3x scale = 48px overworld
 - Canvas: 800x600
 - Farm: 40x25 tiles
-- Seasons: spring/summer/fall/winter
-- Total items: 116 in registry
+- Interior tile scaling: dynamic (capped at 75px)
+- NPC schedule hours: timeOfDay * 24 (0-1 fraction)
 
-## Architecture
-- Monolithic PlayScene (1986 LOC) owns game state
-- Workers create NEW files only, never edit PlayScene
-- Integration phase wires new systems into PlayScene
+## What Works
+- Core farm loop (till/plant/water/harvest/ship)
+- Shop, crafting, cooking, fishing, mining
+- 7 NPCs with schedules (move by time of day)
+- Procedural forage rendering (seasonal items)
+- Achievement panel (T key)
+- Seasonal tree tinting + ambient overlay
+- Interiors (house/coop/barn) with pixel-art furniture
+- Animals (purchase, feed, collect products)
+- Quests, romance, upgrades, machines
+- Save/load, weather, day/night cycle
+- Tutorial, intro narrative, dialogue system
 
-## Blockers
-- None currently
+## Remaining Issues
+- BUG-15: 10 orphan events (cosmetic)
+- BUG-19: Quest wildcards (cosmetic)
