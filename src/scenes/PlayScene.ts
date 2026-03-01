@@ -1313,6 +1313,9 @@ export class PlayScene extends Phaser.Scene {
     this.addLabel(15, 23, 'Quest Board');
     this.addLabel(17, 22, 'Owen\'s Forge');
     this.addLabel(10, 23, 'Carpenter');
+    this.addLabel(28, 10, 'Coop');
+    this.addLabel(32, 10, 'Barn');
+    this.addLabel(6, 18, 'Fishing Pond');
   }
 
   private buildCollisionMap() {
@@ -1324,15 +1327,16 @@ export class PlayScene extends Phaser.Scene {
       if (tile.type === TileType.WATER) mark(tile.x, tile.y);
     }
     
-    // House footprint (house drawn at tile 20,7 with 1.8x scale — covers roughly 4x3 tiles)
+    // House — block roof and upper walls, leave interior walkable for bed/kitchen
     for (let x = 18; x <= 22; x++) {
-      for (let y = 5; y <= 8; y++) {
+      for (let y = 4; y <= 6; y++) {
         mark(x, y);
       }
     }
-    // House entry path stays open at (19-20, 9)
+    mark(17, 7); mark(17, 8); // left wall
+    mark(23, 7); mark(23, 8); // right wall
     
-    // Trees — same positions as createWorldObjects
+    // Trees
     const treePositions = [
       [2, 1], [5, 0], [8, 1], [12, 0], [15, 1], [33, 0], [36, 1], [38, 0],
       [2, 28], [6, 29], [10, 28], [14, 29], [33, 28], [36, 29], [38, 28],
@@ -1344,20 +1348,7 @@ export class PlayScene extends Phaser.Scene {
       mark(tx, ty);
     }
     
-    // Fences — same logic as createWorldObjects
-    for (let fx = 10; fx <= 28; fx++) {
-      for (const fy of [10, 20]) {
-        if (fx >= 18 && fx <= 20 && fy === 10) continue; // gap for entry
-        mark(fx, fy);
-      }
-    }
-    for (let fy = 11; fy <= 19; fy++) {
-      for (const fx of [10, 28]) {
-        mark(fx, fy);
-      }
-    }
-    
-    // Map border (prevent walking off map)
+    // Map border
     for (let x = -1; x <= FARM_WIDTH; x++) {
       mark(x, -1);
       mark(x, FARM_HEIGHT);
@@ -1366,18 +1357,6 @@ export class PlayScene extends Phaser.Scene {
       mark(-1, y);
       mark(FARM_WIDTH, y);
     }
-    
-    // Shop building (around 28,23 area)
-    for (let x = 27; x <= 30; x++) {
-      for (let y = 22; y <= 23; y++) {
-        if (x === 28 && y === 23) continue; // shop interactable stays accessible  
-        // Don't block — shop is just an NPC stand, not a building
-      }
-    }
-    
-    // Coop and Barn
-    for (let x = 27; x <= 29; x++) mark(x, 9);  // coop roof
-    for (let x = 31; x <= 33; x++) mark(x, 9);  // barn roof
   }
 
   private createInteractable(tileX: number, tileY: number, frameOrLabel: number | string, kind: InteractionKind) {
