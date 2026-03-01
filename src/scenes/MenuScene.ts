@@ -315,7 +315,7 @@ export class MenuScene extends Phaser.Scene {
     const startGame = () => {
       const playerName = input.value.trim() || 'Farmer';
       this.cleanupDom();
-      this.scene.start(Scenes.PLAY, { playerName });
+      this.scene.start(Scenes.INTRO, { playerName });
     };
 
     startBtn.addEventListener('click', startGame);

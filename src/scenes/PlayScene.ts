@@ -13,6 +13,7 @@ import { ITEMS, CROPS, RECIPES, FISH, NPCS } from '../data/registry';
 import { FishingMinigame } from '../systems/fishing';
 import { MiningSystem } from '../systems/mining';
 import { ShopSystem } from '../systems/shop';
+import { TutorialSystem } from '../systems/tutorial';
 
 export class PlayScene extends Phaser.Scene {
   // Core state
@@ -40,6 +41,8 @@ export class PlayScene extends Phaser.Scene {
   fishingMinigame!: FishingMinigame;
   miningSystem!: MiningSystem;
   shopSystem!: ShopSystem;
+  tutorialSystem?: TutorialSystem;
+  private isNewGame = false;
 
   // Day timer
   dayTimer = 0;
@@ -47,11 +50,14 @@ export class PlayScene extends Phaser.Scene {
 
   constructor() { super(Scenes.PLAY); }
 
-  init(data?: { loadSave?: boolean }) {
+  init(data?: { loadSave?: boolean; playerName?: string }) {
     if (data?.loadSave) {
+      this.isNewGame = false;
       this.loadGame();
     } else {
+      this.isNewGame = true;
       this.initNewGame();
+      if (data?.playerName) this.player.name = data.playerName;
     }
   }
 
@@ -62,10 +68,11 @@ export class PlayScene extends Phaser.Scene {
     // Create tilemap from farm tiles
     this.createFarmMap();
 
-    // Create player sprite
+    // Create player sprite (48x48 real spritesheet, scale=1 since frames are already 48px ≈ SCALED_TILE)
     this.playerSprite = this.add.sprite(this.player.x, this.player.y, 'player', 0);
-    this.playerSprite.setScale(SCALE);
+    this.playerSprite.setScale(1);
     this.playerSprite.setDepth(ySortDepth(this.player.y));
+    this.playerSprite.play('idle_down');
 
     // Camera follows player
     this.cameras.main.startFollow(this.playerSprite, true, 0.1, 0.1);
@@ -115,6 +122,14 @@ export class PlayScene extends Phaser.Scene {
       season: this.calendar.season,
       year: this.calendar.year
     });
+
+    // Fade in from intro
+    this.cameras.main.fadeIn(1500, 0, 0, 0);
+
+    // Start tutorial for new games
+    if (this.isNewGame) {
+      this.tutorialSystem = new TutorialSystem(this);
+    }
   }
 
   update(time: number, delta: number) {
@@ -130,7 +145,7 @@ export class PlayScene extends Phaser.Scene {
   // ── Initialization ──
 
   private initNewGame() {
-    const spawn = gridToWorld(20, 15);
+    const spawn = gridToWorld(20, 12);
     this.player = {
       name: 'Farmer',
       x: spawn.x, y: spawn.y,
@@ -144,9 +159,11 @@ export class PlayScene extends Phaser.Scene {
       currentMap: MapId.FARM,
     };
 
-    // Give starter items
-    this.player.inventory[0] = { itemId: 'parsnip_seeds', qty: 15, quality: Quality.NORMAL };
-    this.player.inventory[1] = { itemId: 'potato_seeds', qty: 5, quality: Quality.NORMAL };
+    // Give starter items — tools first, then seeds
+    this.player.inventory[0] = { itemId: 'tool_hoe', qty: 1, quality: Quality.NORMAL };
+    this.player.inventory[1] = { itemId: 'tool_watering_can', qty: 1, quality: Quality.NORMAL };
+    this.player.inventory[2] = { itemId: 'parsnip_seeds', qty: 15, quality: Quality.NORMAL };
+    this.player.inventory[3] = { itemId: 'potato_seeds', qty: 5, quality: Quality.NORMAL };
 
     this.calendar = { day: 1, season: Season.SPRING, year: 1, timeOfDay: 0, isPaused: false };
 
@@ -155,11 +172,47 @@ export class PlayScene extends Phaser.Scene {
     for (let y = 0; y < FARM_HEIGHT; y++) {
       for (let x = 0; x < FARM_WIDTH; x++) {
         let type = TileType.GRASS;
-        // Water pond
-        if (x >= 30 && x <= 34 && y >= 10 && y <= 14) type = TileType.WATER;
-        // Some rocks and stumps
-        if (Math.random() < 0.03 && type === TileType.GRASS) type = TileType.STONE;
-        if (Math.random() < 0.03 && type === TileType.GRASS) type = TileType.WOOD;
+
+        // ── Water pond (northeast) ──
+        if (x >= 30 && x <= 34 && y >= 3 && y <= 6) type = TileType.WATER;
+
+        // ── Main path: vertical from house down to farm ──
+        if (x >= 19 && x <= 20 && y >= 8 && y <= 20) type = TileType.PATH;
+        // Horizontal path east to shipping bin
+        if (y >= 14 && y <= 15 && x >= 20 && x <= 26) type = TileType.PATH;
+        // Path south toward town exit
+        if (x >= 19 && x <= 20 && y >= 20 && y <= 29) type = TileType.PATH;
+
+        // ── Starter farming plot (clear dirt, south of house) ──
+        if (x >= 14 && x <= 18 && y >= 16 && y <= 22) type = TileType.DIRT;
+
+        // ── Sand near water ──
+        if (type === TileType.GRASS) {
+          const dx = Math.min(Math.abs(x - 30), Math.abs(x - 34));
+          const dy = Math.min(Math.abs(y - 3), Math.abs(y - 6));
+          if (x >= 28 && x <= 36 && y >= 1 && y <= 8 && (dx <= 1 || dy <= 1)) {
+            if (type !== TileType.WATER) type = TileType.SAND;
+          }
+        }
+
+        // ── Trees along edges (leave playable area clear) ──
+        if (type === TileType.GRASS) {
+          // Top tree line
+          if (y <= 1 && Math.random() < 0.4) type = TileType.WOOD;
+          // Left tree line
+          if (x <= 2 && Math.random() < 0.3) type = TileType.WOOD;
+          // Right tree line
+          if (x >= 37 && Math.random() < 0.3) type = TileType.WOOD;
+          // Bottom tree line
+          if (y >= 28 && Math.random() < 0.3) type = TileType.WOOD;
+        }
+
+        // ── Scattered rocks/stumps (sparse in play area) ──
+        if (type === TileType.GRASS && y > 3 && y < 27 && x > 3 && x < 36) {
+          if (Math.random() < 0.015) type = TileType.STONE;
+          if (Math.random() < 0.015) type = TileType.WOOD;
+        }
+
         this.farmTiles.push({ x, y, type, watered: false });
       }
     }
@@ -208,9 +261,19 @@ export class PlayScene extends Phaser.Scene {
     // Update sprite
     this.playerSprite.setPosition(this.player.x, this.player.y);
 
-    // Direction frame
-    const dirFrames = { [Direction.DOWN]: 0, [Direction.LEFT]: 1, [Direction.RIGHT]: 2, [Direction.UP]: 3 };
-    this.playerSprite.setFrame(dirFrames[this.player.direction] ?? 0);
+    // Play walk/idle animations
+    const moving = vx !== 0 || vy !== 0;
+    const animMap: Record<string, { walk: string; idle: string }> = {
+      [Direction.DOWN]:  { walk: 'walk_down',  idle: 'idle_down' },
+      [Direction.UP]:    { walk: 'walk_up',    idle: 'idle_up' },
+      [Direction.LEFT]:  { walk: 'walk_left',  idle: 'idle_left' },
+      [Direction.RIGHT]: { walk: 'walk_right', idle: 'idle_right' },
+    };
+    const anim = animMap[this.player.direction] || animMap[Direction.DOWN];
+    const targetAnim = moving ? anim.walk : anim.idle;
+    if (this.playerSprite.anims.currentAnim?.key !== targetAnim) {
+      this.playerSprite.play(targetAnim);
+    }
   }
 
   // ── Tool Use ──
@@ -544,6 +607,14 @@ export class PlayScene extends Phaser.Scene {
         case InteractionKind.SHOP:
           // UI listens directly to INTERACT(kind=SHOP); no PlayScene-side action needed here.
           break;
+        case InteractionKind.DOOR:
+          // Mine entrance
+          this.events.emit(Events.TOAST, { message: 'Entering the mines...', color: '#aaccff' });
+          this.events.emit(Events.ENTER_MINE, { floor: 1 });
+          break;
+        case InteractionKind.QUEST_BOARD:
+          this.events.emit(Events.TOAST, { message: 'Quest board: Check back soon!', color: '#ffaa44' });
+          break;
       }
     });
 
@@ -666,14 +737,26 @@ export class PlayScene extends Phaser.Scene {
   private createWorldObjects() {
     this.objectLayer = this.add.container(0, 0);
 
-    // Shipping bin at (25, 10)
-    this.createInteractable(25, 10, 0, InteractionKind.SHIPPING_BIN);
-    // Crafting bench at (18, 12)
-    this.createInteractable(18, 12, 1, InteractionKind.CRAFTING_BENCH);
-    // Bed at (22, 8)
-    this.createInteractable(22, 8, 2, InteractionKind.BED);
-    // Kitchen at (20, 8)
-    this.createInteractable(20, 8, 3, InteractionKind.KITCHEN);
+    // House (decorative, near where player spawns — frame 7)
+    const housePos = gridToWorld(19, 7);
+    const house = this.add.sprite(housePos.x + SCALED_TILE / 2, housePos.y, 'objects', 7);
+    house.setScale(SCALE * 2);
+    house.setDepth(ySortDepth(housePos.y));
+
+    // Bed (near house)
+    this.createInteractable(20, 9, 2, InteractionKind.BED);
+    // Kitchen (near house)
+    this.createInteractable(18, 9, 3, InteractionKind.KITCHEN);
+    // Crafting bench (west of house)
+    this.createInteractable(16, 11, 1, InteractionKind.CRAFTING_BENCH);
+    // Shipping bin (east of path, near farming area)
+    this.createInteractable(26, 14, 0, InteractionKind.SHIPPING_BIN);
+    // Shop sign (east side)
+    this.createInteractable(28, 10, 4, InteractionKind.SHOP);
+    // Mine entrance (northeast)
+    this.createInteractable(35, 5, 5, InteractionKind.DOOR);
+    // Quest board (south along path)
+    this.createInteractable(22, 20, 6, InteractionKind.QUEST_BOARD);
   }
 
   private createInteractable(tileX: number, tileY: number, frame: number, kind: InteractionKind) {

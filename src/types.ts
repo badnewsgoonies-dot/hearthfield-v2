@@ -369,6 +369,7 @@ export const Events = {
 export const Scenes = {
   BOOT:      'BootScene',
   MENU:      'MenuScene',
+  INTRO:     'IntroScene',
   PLAY:      'PlayScene',
   UI:        'UIScene',        // runs parallel to PlayScene as overlay
 } as const;
