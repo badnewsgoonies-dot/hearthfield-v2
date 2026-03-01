@@ -63,20 +63,61 @@ export class BootScene extends Phaser.Scene {
 
   private genPlayer(T: number) {
     const g = this.make.graphics();
+    const outline = 0x1f1a1a;
+    const skin = 0xf2c191;
+    const skinShadow = 0xd69d71;
+    const denim = 0x3a5f9b;
+    const denimHi = 0x5c82be;
+    const shirt = 0xe8f0d5;
+    const hat = 0xb88a4a;
+    const hatBand = 0x7f5a30;
+    const boot = 0x5a3f2c;
+
     for (let i = 0; i < 4; i++) {
       const ox = i * T;
-      g.fillStyle(0x6B3A2A); g.fillRect(ox+4,13,3,3); g.fillRect(ox+9,13,3,3);
-      g.fillStyle(0x3B5998); g.fillRect(ox+4,10,3,3); g.fillRect(ox+9,10,3,3);
-      g.fillStyle(0xE74C3C); g.fillRect(ox+3,6,10,4);
-      g.fillStyle(0xFFCC88); g.fillRect(ox+2,7,1,3); g.fillRect(ox+13,7,1,3);
-      g.fillStyle(0xFFCC88); g.fillRect(ox+4,1,8,5);
-      g.fillStyle(0xD4A937); g.fillRect(ox+3,0,10,1);
-      g.fillStyle(0x8B4513); g.fillRect(ox+4,0,8,2);
-      g.fillStyle(0x222222);
-      if (i===0) { g.fillRect(ox+6,3,1,1); g.fillRect(ox+9,3,1,1); }
-      else if (i===1) { g.fillStyle(0x8B4513); g.fillRect(ox+4,1,8,3); }
-      else if (i===2) { g.fillRect(ox+5,3,1,1); }
-      else { g.fillRect(ox+10,3,1,1); }
+      const facingSide = i >= 2;
+      const isLeft = i === 2;
+
+      // Hat + brim
+      g.fillStyle(outline); g.fillRect(ox + 3, 0, 10, 1); g.fillRect(ox + 2, 1, 12, 1);
+      g.fillStyle(hat); g.fillRect(ox + 4, 0, 8, 1); g.fillRect(ox + 3, 1, 10, 1);
+      g.fillStyle(hatBand); g.fillRect(ox + 4, 1, 8, 1);
+
+      // Head
+      g.fillStyle(outline); g.fillRect(ox + 3, 2, 10, 5);
+      g.fillStyle(skin); g.fillRect(ox + 4, 2, 8, 4);
+      g.fillStyle(skinShadow); g.fillRect(ox + 10, 3, 1, 2);
+      if (!facingSide) {
+        g.fillStyle(0x2a2322); g.fillRect(ox + 6, 4, 1, 1); g.fillRect(ox + 9, 4, 1, 1);
+      } else {
+        g.fillStyle(0x2a2322); g.fillRect(ox + (isLeft ? 6 : 9), 4, 1, 1);
+      }
+
+      // Torso and overalls
+      g.fillStyle(outline); g.fillRect(ox + 2, 7, 12, 6);
+      g.fillStyle(shirt); g.fillRect(ox + 3, 8, 10, 4);
+      g.fillStyle(denim); g.fillRect(ox + 5, 8, 6, 5);
+      g.fillStyle(denimHi); g.fillRect(ox + 6, 9, 4, 2);
+      g.fillStyle(outline); g.fillRect(ox + 6, 7, 1, 5); g.fillRect(ox + 9, 7, 1, 5);
+
+      // Arms
+      if (!facingSide) {
+        g.fillStyle(skin); g.fillRect(ox + 2, 8, 1, 3); g.fillRect(ox + 13, 8, 1, 3);
+      } else if (isLeft) {
+        g.fillStyle(skin); g.fillRect(ox + 2, 8, 1, 3); g.fillRect(ox + 11, 8, 1, 2);
+      } else {
+        g.fillStyle(skin); g.fillRect(ox + 4, 8, 1, 2); g.fillRect(ox + 13, 8, 1, 3);
+      }
+
+      // Legs and boots
+      g.fillStyle(denim); g.fillRect(ox + 4, 12, 3, 2); g.fillRect(ox + 9, 12, 3, 2);
+      g.fillStyle(boot); g.fillRect(ox + 4, 14, 3, 2); g.fillRect(ox + 9, 14, 3, 2);
+      g.fillStyle(0x2f241c); g.fillRect(ox + 5, 15, 2, 1); g.fillRect(ox + 10, 15, 2, 1);
+
+      // Side-facing profile tweak
+      if (facingSide) {
+        g.fillStyle(outline); g.fillRect(ox + (isLeft ? 11 : 4), 3, 1, 2);
+      }
     }
     g.generateTexture('player', T*4, T); g.destroy();
     const pTex = this.textures.get('player');
@@ -89,44 +130,84 @@ export class BootScene extends Phaser.Scene {
       const ox = i * T;
       switch(i) {
         case 0: // GRASS
-          g.fillStyle(0x5DAE47); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x4A9636); g.fillRect(ox+3,5,1,2); g.fillRect(ox+8,10,1,2); g.fillRect(ox+12,3,1,2);
+          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x89ce63); g.fillRect(ox,0,T,4); g.fillRect(ox+1,6,2,1); g.fillRect(ox+9,2,2,1);
+          g.fillStyle(0x5aa43d); g.fillRect(ox,12,T,4); g.fillRect(ox+4,8,1,2); g.fillRect(ox+11,9,1,2);
+          g.fillStyle(0x4a8f33);
+          g.fillRect(ox+2,3,1,2); g.fillRect(ox+6,11,1,2); g.fillRect(ox+12,5,1,2); g.fillRect(ox+14,10,1,2);
+          g.fillStyle(0x9fe07a);
+          g.fillRect(ox+3,4,1,1); g.fillRect(ox+8,7,1,1); g.fillRect(ox+13,2,1,1); g.fillRect(ox+5,13,1,1);
           break;
         case 1: // DIRT
-          g.fillStyle(0x8B6914); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x7A5C10); g.fillRect(ox+2,4,2,1); g.fillRect(ox+10,8,2,1);
+          g.fillStyle(0x9a6a3f); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xae7b4d); g.fillRect(ox,0,T,4); g.fillRect(ox+3,6,2,1);
+          g.fillStyle(0x7f5431); g.fillRect(ox,12,T,4); g.fillRect(ox+10,9,2,1);
+          g.fillStyle(0xc49667); g.fillRect(ox+2,3,1,1); g.fillRect(ox+12,5,1,1); g.fillRect(ox+7,11,1,1);
+          g.fillStyle(0x6d4629); g.fillRect(ox+5,7,2,1); g.fillRect(ox+13,10,2,1); g.fillRect(ox+1,13,2,1);
           break;
         case 2: // TILLED
-          g.fillStyle(0x5C4020); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x4A3318); for(let r=2;r<T;r+=4) g.fillRect(ox,r,T,1);
+          g.fillStyle(0x6f4a2c); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x55361f);
+          for (let r = 2; r < T; r += 4) g.fillRect(ox, r, T, 1);
+          g.fillStyle(0x84603a);
+          for (let r = 0; r < T; r += 4) g.fillRect(ox + 1, r, T - 2, 1);
           break;
         case 3: // WATERED
-          g.fillStyle(0x3A2A15); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x2E2010); for(let r=2;r<T;r+=4) g.fillRect(ox,r,T,1);
+          g.fillStyle(0x4c3727); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x3d2b1f);
+          for (let r = 2; r < T; r += 4) g.fillRect(ox, r, T, 1);
+          g.fillStyle(0x5f4c3b); g.fillRect(ox, 0, T, 2);
+          g.fillStyle(0x6f8aa1); g.fillRect(ox+2,3,2,1); g.fillRect(ox+9,7,2,1); g.fillRect(ox+5,11,2,1);
           break;
         case 4: // WATER
-          g.fillStyle(0x3A8FD6); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x5AAFEE); g.fillRect(ox+1,4,5,1); g.fillRect(ox+8,9,5,1); g.fillRect(ox+3,13,4,1);
+          g.fillStyle(0x2f79bf); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x4d9de0); g.fillRect(ox,0,T,6); g.fillRect(ox+2,8,11,2);
+          g.fillStyle(0x78c4f4);
+          g.fillRect(ox+1,3,5,1); g.fillRect(ox+9,5,4,1); g.fillRect(ox+5,9,6,1); g.fillRect(ox+2,13,5,1);
+          g.fillStyle(0x1f5e99); g.fillRect(ox,14,T,2);
           break;
         case 5: // STONE
-          g.fillStyle(0x5DAE47); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x888888); g.fillRect(ox+3,5,10,8);
-          g.fillStyle(0xAAAAAA); g.fillRect(ox+4,5,8,3);
+          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x777b82); g.fillRect(ox+3,5,10,8);
+          g.fillStyle(0x999ea6); g.fillRect(ox+4,5,7,3); g.fillRect(ox+6,10,5,2);
+          g.fillStyle(0x5d6168); g.fillRect(ox+4,12,7,1); g.fillRect(ox+11,8,1,3);
           break;
         case 6: // WOOD
-          g.fillStyle(0x5DAE47); g.fillRect(ox,0,T,T);
-          g.fillStyle(0x6B4226); g.fillRect(ox+4,6,8,8);
-          g.fillStyle(0x8B5A2B); g.fillRect(ox+5,7,6,6);
+          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x7c4f2e); g.fillRect(ox+4,5,8,9);
+          g.fillStyle(0xa16a3b); g.fillRect(ox+5,6,6,7);
+          g.fillStyle(0x5e3a22); g.fillRect(ox+6,6,1,7); g.fillRect(ox+9,6,1,7);
+          g.fillStyle(0xc38754); g.fillRect(ox+7,8,2,1); g.fillRect(ox+8,11,2,1);
           break;
         case 7: // SAND
-          g.fillStyle(0xE8D5A3); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xe6d39b); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xf0e0b2); g.fillRect(ox,0,T,4);
+          g.fillStyle(0xd2bd86); g.fillRect(ox,12,T,4);
+          g.fillStyle(0xc9b278); g.fillRect(ox+2,6,1,1); g.fillRect(ox+7,10,1,1); g.fillRect(ox+12,8,1,1);
           break;
         case 8: // PATH
-          g.fillStyle(0xC4A86E); g.fillRect(ox,0,T,T);
-          g.fillStyle(0xB09858); g.fillRect(ox+3,3,2,2); g.fillRect(ox+10,10,2,2);
+          g.fillStyle(0xbf9a67); g.fillRect(ox,0,T,T);
+          g.fillStyle(0xd1af7d); g.fillRect(ox,0,T,3);
+          g.fillStyle(0x9f7f53); g.fillRect(ox,13,T,3);
+          g.fillStyle(0x8b6c45);
+          g.fillRect(ox+2,4,2,2); g.fillRect(ox+11,6,2,2); g.fillRect(ox+6,10,3,2); g.fillRect(ox+1,12,2,1);
+          g.fillStyle(0xe3c18e); g.fillRect(ox+4,7,1,1); g.fillRect(ox+9,3,1,1);
+          break;
+        case 9: // FENCE TILE
+          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x7e5536); g.fillRect(ox+6,1,4,14);
+          g.fillStyle(0xa67646); g.fillRect(ox,4,T,3); g.fillRect(ox,10,T,3);
+          g.fillStyle(0x5f3e27); g.fillRect(ox+7,2,1,12); g.fillRect(ox+2,5,1,1); g.fillRect(ox+11,11,1,1);
+          g.fillStyle(0xc48f5a); g.fillRect(ox+1,4,2,1); g.fillRect(ox+12,10,2,1);
           break;
         default:
-          g.fillStyle(0x5DAE47+(i*0x030303)); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x74bf54); g.fillRect(ox,0,T,T);
+          g.fillStyle(0x84c95f); g.fillRect(ox,0,T,5);
+          g.fillStyle(0x609c45); g.fillRect(ox,11,T,5);
+          g.fillStyle(0x4a8a35);
+          g.fillRect(ox+((i*3)%13),3,1,2);
+          g.fillRect(ox+((i*5)%12),8,1,2);
+          g.fillRect(ox+((i*7)%11),13,1,1);
       }
     }
     g.generateTexture('terrain', T*16, T); g.destroy();
