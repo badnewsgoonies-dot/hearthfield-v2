@@ -31,11 +31,11 @@ export interface TownLayoutData {
 
 export const TOWN_LAYOUT: TownLayoutData = {
   buildings: [
-    { type: 'shop', tileX: 27, tileY: 22, label: 'Shop' },
-    { type: 'blacksmith', tileX: 16, tileY: 21, label: 'Blacksmith' },
-    { type: 'carpenter', tileX: 9, tileY: 22, label: 'Carpenter' },
+    { type: 'shop', tileX: 27, tileY: 22, label: 'General Store' },
+    { type: 'blacksmith', tileX: 16, tileY: 21, label: "Owen's Forge" },
+    { type: 'carpenter', tileX: 9, tileY: 22, label: "Finn's Workshop" },
     { type: 'town_hall', tileX: 19, tileY: 25, label: 'Town Hall' },
-    { type: 'shop', tileX: 24, tileY: 25, label: 'Inn / Tavern' },
+    { type: 'shop', tileX: 24, tileY: 25, label: 'Rusty Mug Inn' },
   ],
   decorations: [
     { type: 'well', tileX: 20, tileY: 23 },

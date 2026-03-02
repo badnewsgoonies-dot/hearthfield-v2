@@ -62,7 +62,8 @@ export enum InteractionKind {
   KITCHEN = 'kitchen', MACHINE = 'machine', CARPENTER = 'carpenter',
   BLACKSMITH = 'blacksmith', QUEST_BOARD = 'quest_board', CHEST = 'chest',
   BED = 'bed', SHOP = 'shop', CROP = 'crop', FORAGEABLE = 'forageable',
-  ANIMAL = 'animal', DOOR = 'door', ENTER_BUILDING = 'enter_building'
+  ANIMAL = 'animal', DOOR = 'door', ENTER_BUILDING = 'enter_building',
+  FESTIVAL = 'festival'
 }
 
 // ════════════════════════════════════════════════════════════

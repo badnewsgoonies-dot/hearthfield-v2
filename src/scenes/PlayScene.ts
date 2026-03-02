@@ -32,6 +32,7 @@ import { AchievementPanel } from '../systems/achievementPanel';
 import { ACHIEVEMENTS } from '../data/achievementData';
 import { TownRenderer } from '../systems/townRenderer';
 import { TOWN_LAYOUT } from '../data/townData';
+import { FestivalEventHandler } from '../systems/festivalEvents';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -258,6 +259,7 @@ export class PlayScene extends Phaser.Scene {
         [InteractionKind.CARPENTER]: 'Press E — Upgrade House',
         [InteractionKind.FORAGEABLE]: 'Press E — Collect',
         [InteractionKind.ENTER_BUILDING]: 'Press E — Enter',
+        [InteractionKind.FESTIVAL]: 'Press E — Attend Festival',
       };
       const label = kindLabels[interaction.kind] || 'Press E';
       if (interaction.kind === InteractionKind.ENTER_BUILDING && interaction.building) {
@@ -691,13 +693,42 @@ export class PlayScene extends Phaser.Scene {
     );
     this.renderForageables();
     this.festivalSystem.onDayStart(this.calendar.day, this.calendar.season as any);
-    const festival = (this.festivalSystem as any).getTodaysFestival?.(this.calendar.season, this.calendar.day);
+    const festival = this.festivalSystem.checkFestival(this.calendar.day, this.calendar.season as any);
+    // Remove old festival zone if any
+    if ((this as any)._festivalZone) { (this as any)._festivalZone.destroy(); (this as any)._festivalZone = null; }
+    if ((this as any)._festivalDecor) { for (const d of (this as any)._festivalDecor) d.destroy(); (this as any)._festivalDecor = null; }
     if (festival) {
       this.events.emit(Events.TOAST, {
         message: `🎉 Today: ${festival.name}! Visit the town square.`,
         color: '#ffaa44',
         duration: 5000
       });
+      // Spawn interactable festival zone at town square (20, 24)
+      const fPos = gridToWorld(20, 24);
+      const fZone = this.add.zone(fPos.x, fPos.y, SCALED_TILE, SCALED_TILE);
+      fZone.setData('interaction', { kind: InteractionKind.FESTIVAL, x: 20, y: 24 });
+      this.objectLayer.add(fZone);
+      (this as any)._festivalZone = fZone;
+      // Add festival decorations — banner + colored lanterns
+      const decor: Phaser.GameObjects.GameObject[] = [];
+      const g = this.add.graphics();
+      g.setDepth(ySortDepth(fPos.y) - 1);
+      // Festival banner
+      g.fillStyle(0xcc2222, 1); g.fillRect(fPos.x - 40, fPos.y - 36, 80, 18);
+      g.fillStyle(0xffffff, 1);
+      // Lanterns on either side
+      for (const ox of [-50, 50]) {
+        g.fillStyle(0xffdd44, 0.8); g.fillCircle(fPos.x + ox, fPos.y - 20, 6);
+        g.fillStyle(0xff8800, 0.4); g.fillCircle(fPos.x + ox, fPos.y - 20, 10);
+      }
+      decor.push(g);
+      // Label
+      const label = this.add.text(fPos.x, fPos.y - 44, `⭐ ${festival.name}`, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#ffee88',
+        stroke: '#000000', strokeThickness: 3, align: 'center'
+      }).setOrigin(0.5).setDepth(9000);
+      decor.push(label);
+      (this as any)._festivalDecor = decor;
     }
     this.upgradeSystem.checkPendingUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
     const houseTierUp = this.upgradeSystem.checkHouseUpgrade(this.calendar.day, this.calendar.season, this.calendar.year);
@@ -1198,6 +1229,57 @@ export class PlayScene extends Phaser.Scene {
           }
           break;
         }
+
+        case InteractionKind.FESTIVAL: {
+          const festival = this.festivalSystem.checkFestival(this.calendar.day, this.calendar.season as any);
+          if (!festival) {
+            this.events.emit(Events.TOAST, { message: 'No festival today.', color: '#aaaaaa' });
+            break;
+          }
+          if (this.festivalSystem.getAttended().includes(festival.id)) {
+            this.events.emit(Events.TOAST, { message: `Already attended ${festival.name} today!`, color: '#aaaaaa' });
+            break;
+          }
+          // Gather player stats for scoring
+          const playerData: Record<string, any> = {
+            gold: this.player.gold,
+            totalShipped: this.stats.itemsShipped ?? 0,
+            cropsHarvested: this.stats.cropsHarvested ?? 0,
+            fishCaught: this.stats.fishCaught ?? 0,
+            monstersKilled: this.stats.monstersKilled ?? 0,
+            friendships: Object.values(this.relationships).reduce((sum: number, r: any) => sum + (r.hearts || 0), 0),
+          };
+          // Find best item in inventory for judging
+          let bestPrice = 0;
+          let bestItem: any = null;
+          for (const slot of this.player.inventory) {
+            if (slot) {
+              const def = ITEMS.find(i => i.id === slot.itemId);
+              if (def && def.sellPrice > bestPrice) {
+                bestPrice = def.sellPrice;
+                bestItem = { name: def.name, sellPrice: def.sellPrice, quality: slot.quality ?? 0 };
+              }
+            }
+          }
+          if (bestItem) playerData.bestItem = bestItem;
+
+          const result = FestivalEventHandler.calculateScore(festival, playerData);
+          this.festivalSystem.attendFestival(festival.id);
+
+          // Award rewards
+          for (const r of result.rewards) {
+            this.addToInventory(r.itemId, r.qty);
+          }
+          const rewardText = result.rewards.length > 0
+            ? `\nRewards: ${result.rewards.map(r => `${r.qty}x ${r.itemId}`).join(', ')}`
+            : '';
+          this.events.emit(Events.TOAST, {
+            message: `${festival.name} — ${result.rank}!\n${result.message}${rewardText}`,
+            color: result.rank === 'Gold' ? '#ffdd44' : result.rank === 'Silver' ? '#cccccc' : '#cc8844',
+            duration: 6000,
+          });
+          break;
+        }
       }
     });
 
@@ -1395,15 +1477,22 @@ export class PlayScene extends Phaser.Scene {
     this.createInteractable(15, 23, 6, InteractionKind.QUEST_BOARD);
     this.createInteractable(17, 22, 7, InteractionKind.BLACKSMITH);
     this.createInteractable(10, 23, 7, InteractionKind.CARPENTER);
+
+    // Hide sprites for town-building interactables (TownRenderer draws proper buildings)
+    for (const obj of this.objectLayer.list) {
+      const spr = obj as Phaser.GameObjects.Sprite;
+      if (!spr.getData) continue;
+      const data = spr.getData('interaction');
+      if (data && (data.kind === InteractionKind.SHOP || data.kind === InteractionKind.BLACKSMITH || data.kind === InteractionKind.CARPENTER)) {
+        spr.setAlpha(0);
+      }
+    }
   
     this.addLabel(27, 12, 'Shipping Bin');
     this.addLabel(12, 16, 'Crafting Bench');
     this.addLabel(20, 9, 'Home');
-    this.addLabel(28, 23, 'Shop');
     this.addLabel(35, 4, 'Mine Entrance');
     this.addLabel(15, 23, 'Quest Board');
-    this.addLabel(17, 22, 'Owen\'s Forge');
-    this.addLabel(10, 23, 'Carpenter');
     this.addLabel(28, 11, 'Coop');
     this.addLabel(32, 11, 'Barn');
     this.addLabel(6, 18, 'Fishing Pond');
@@ -1845,11 +1934,32 @@ export class PlayScene extends Phaser.Scene {
         cropSpr.setFrame(cropDef.spriteRow * 6 + tile.cropStage);
         cropSpr.setDepth(ySortDepth(pos.y));
         cropSpr.setVisible(true);
+        // Harvest-ready bounce
+        const isReady = tile.cropStage >= cropDef.growthStages - 1;
+        if (isReady && !cropSpr.getData('bouncing')) {
+          cropSpr.setData('bouncing', true);
+          this.tweens.add({
+            targets: cropSpr,
+            y: pos.y - 12,
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        } else if (!isReady && cropSpr.getData('bouncing')) {
+          this.tweens.killTweensOf(cropSpr);
+          cropSpr.setData('bouncing', false);
+          cropSpr.y = pos.y - 8;
+        }
       }
     } else {
       const key = `${tile.x},${tile.y}`;
       const cropSpr = this.cropSprites.get(key);
-      if (cropSpr) cropSpr.setVisible(false);
+      if (cropSpr) {
+        this.tweens.killTweensOf(cropSpr);
+        cropSpr.setData('bouncing', false);
+        cropSpr.setVisible(false);
+      }
     }
   }
 
@@ -1883,6 +1993,30 @@ export class PlayScene extends Phaser.Scene {
         alpha: { start: 0.6, end: 0.1 },
         scale: { start: 1, end: 0.5 },
         frequency: 30,
+      });
+      this.weatherParticleEmitter.setScrollFactor(0);
+      this.weatherParticleEmitter.setDepth(9998);
+    } else if (this.currentWeather === WeatherType.SNOW) {
+      // Snow particles — gentle falling flakes
+      const { width, height } = this.cameras.main;
+      if (!this.textures.exists('snow_flake')) {
+        const g = this.add.graphics();
+        g.fillStyle(0xffffff, 0.9);
+        g.fillCircle(2, 2, 2);
+        g.generateTexture('snow_flake', 4, 4);
+        g.destroy();
+      }
+      this.weatherParticleEmitter = this.add.particles(0, -20, 'snow_flake', {
+        x: { min: -50, max: width + 50 },
+        y: -20,
+        lifespan: 4000,
+        speedY: { min: 30, max: 80 },
+        speedX: { min: -20, max: 20 },
+        quantity: 2,
+        alpha: { start: 0.8, end: 0.2 },
+        scale: { start: 1.2, end: 0.4 },
+        frequency: 50,
+        rotate: { min: 0, max: 360 },
       });
       this.weatherParticleEmitter.setScrollFactor(0);
       this.weatherParticleEmitter.setDepth(9998);
@@ -1926,11 +2060,44 @@ export class PlayScene extends Phaser.Scene {
       this.dayNightOverlay.setScrollFactor(0);
       this.dayNightOverlay.setDepth(9991);
     }
-    // Map time to darkness: morning=0, dusk=0.15, night=0.35
+    // Rich day/night cycle with dawn/dusk color shifts
+    // progress: 0=6AM, 0.25=12PM, 0.5=6PM, 0.75=12AM, 1=6AM
     const progress = this.dayTimer / DAY_LENGTH_MS;
+
+    let color = 0x000022; // default night blue
     let alpha = 0;
-    if (progress > 0.7) alpha = (progress - 0.7) / 0.3 * 0.35; // evening → night
-    else if (progress > 0.55) alpha = (progress - 0.55) / 0.15 * 0.08; // late afternoon
+
+    if (progress < 0.08) {
+      // Pre-dawn: deep blue → warm orange (6:00-7:55AM)
+      const t = progress / 0.08;
+      color = 0x332244;
+      alpha = 0.2 * (1 - t);
+    } else if (progress < 0.15) {
+      // Dawn golden hour: warm orange glow fading (7:55-9:30AM)
+      const t = (progress - 0.08) / 0.07;
+      color = 0x443300;
+      alpha = 0.08 * (1 - t);
+    } else if (progress < 0.55) {
+      // Full day: clear (9:30AM-7:00PM)
+      alpha = 0;
+    } else if (progress < 0.65) {
+      // Golden hour / sunset: warm amber tint (7:00-9:30PM)
+      const t = (progress - 0.55) / 0.1;
+      color = 0x442200;
+      alpha = t * 0.12;
+    } else if (progress < 0.75) {
+      // Dusk: amber → deep blue (9:30PM-12:00AM)
+      const t = (progress - 0.65) / 0.1;
+      // Blend from amber (0x442200) to night blue (0x000033)
+      color = t < 0.5 ? 0x331111 : 0x000022;
+      alpha = 0.12 + t * 0.2;
+    } else {
+      // Deep night (12:00AM-6:00AM)
+      color = 0x000022;
+      alpha = 0.32;
+    }
+
+    this.dayNightOverlay.setFillStyle(color, 1);
     this.dayNightOverlay.setAlpha(alpha);
   }
 
