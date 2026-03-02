@@ -33,6 +33,10 @@ import { ACHIEVEMENTS } from '../data/achievementData';
 import { TownRenderer } from '../systems/townRenderer';
 import { TOWN_LAYOUT } from '../data/townData';
 import { FestivalEventHandler } from '../systems/festivalEvents';
+import { ParticleEffects } from '../systems/particleEffects';
+import { WaterAnimation } from '../systems/waterAnimation';
+import { getGiftReaction, NPC_GIFT_DIALOGUE } from '../data/npcGiftData';
+import { ItemTooltip } from '../systems/itemTooltip';
 
 interface TutorialAdvancePayload {
   active: boolean;
@@ -72,6 +76,8 @@ export class PlayScene extends Phaser.Scene {
   farmAnimalSprites: { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; targetX: number; targetY: number; timer: number }[] = [];
   solidTiles: Set<string> = new Set();
   townSolidTiles: Array<{ x: number; y: number }> = [];
+  private waterAnimation?: WaterAnimation;
+  private itemTooltip?: ItemTooltip;
   private seasonalTintOverlay?: Phaser.GameObjects.Rectangle;
   private dayNightOverlay?: Phaser.GameObjects.Rectangle;
   private weatherParticleEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -237,6 +243,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
+    if (this.waterAnimation) this.waterAnimation.update(delta);
     this.handleMovement(delta);
     this.handleToolInput();
     this.handleInteractionInput();
@@ -841,6 +848,9 @@ export class PlayScene extends Phaser.Scene {
               this.stats.cropsHarvested += qty;
               this.events.emit(Events.CROP_HARVESTED, { cropId: cropDef.id, qty, quality });
               this.events.emit(Events.STAT_INCREMENT, { stat: 'cropsHarvested', amount: qty });
+              // Harvest particle burst
+              const harvestPos = gridToWorld(data.tileX, data.tileY);
+              ParticleEffects.harvestBurst(this, harvestPos.x, harvestPos.y);
 
               if (cropDef.regrows) {
                 tile.cropStage = cropDef.growthStages - 3;
@@ -1314,17 +1324,27 @@ export class PlayScene extends Phaser.Scene {
         this.events.emit(Events.TOAST, { message: 'Already gave a gift today.', color: '#aaaaaa' });
         return;
       }
-      let points = 20; // neutral
-      let reaction = 'neutral';
-      if (npcDef.lovedItems.includes(data.itemId)) { points = 80; reaction = 'love'; }
-      else if (npcDef.likedItems.includes(data.itemId)) { points = 45; reaction = 'like'; }
-      else if (npcDef.hatedItems.includes(data.itemId)) { points = -40; reaction = 'hate'; }
+      // Use expanded gift preference system
+      const tier = getGiftReaction(data.npcId, data.itemId);
+      const pointsMap: Record<string, number> = { loved: 80, liked: 45, neutral: 20, disliked: -20, hated: -40 };
+      const colorMap: Record<string, string> = { loved: '#ff44ff', liked: '#ff88cc', neutral: '#aaaaaa', disliked: '#ff8844', hated: '#ff4444' };
+      const points = pointsMap[tier] ?? 20;
+
+      // Get personality dialogue if available
+      const dialogue = NPC_GIFT_DIALOGUE[data.npcId];
+      let msg = `${npcDef.name} ${tier} the gift!`;
+      if (dialogue && tier in dialogue) {
+        const lines = (dialogue as any)[tier] as string[];
+        if (lines && lines.length > 0) {
+          msg = `${npcDef.name}: "${lines[Math.floor(Math.random() * lines.length)]}"`;
+        }
+      }
 
       rel.hearts = clamp(rel.hearts + points, 0, 1000);
       rel.giftedToday = true;
       this.stats.giftsGiven++;
       this.events.emit(Events.RELATIONSHIP_UP, { npcId: data.npcId, newHearts: rel.hearts });
-      this.events.emit(Events.TOAST, { message: `${npcDef.name} ${reaction}d the gift!`, color: reaction === 'hate' ? '#ff4444' : '#ff88cc' });
+      this.events.emit(Events.TOAST, { message: msg, color: colorMap[tier] ?? '#aaaaaa', duration: 4000 });
     });
 
     this.events.on(Events.FISH_CAUGHT, (data: { fishId: string; quality: Quality }) => {
@@ -1499,6 +1519,20 @@ export class PlayScene extends Phaser.Scene {
 
     // ── Town Buildings & Decorations ──
     this.renderTown();
+
+    // ── Water Animation ──
+    this.waterAnimation = new WaterAnimation(this);
+    const waterTiles: Array<{x: number; y: number; worldX: number; worldY: number; tileSize: number}> = [];
+    for (const tile of this.farmTiles) {
+      if (tile.type === TileType.WATER) {
+        const pos = gridToWorld(tile.x, tile.y);
+        waterTiles.push({ x: tile.x, y: tile.y, worldX: pos.x, worldY: pos.y, tileSize: SCALED_TILE });
+      }
+    }
+    this.waterAnimation.setupWaterTiles(waterTiles);
+
+    // ── Item Tooltip ──
+    this.itemTooltip = new ItemTooltip(this);
   }
 
   private renderTown() {
