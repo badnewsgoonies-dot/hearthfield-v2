@@ -474,3 +474,109 @@ export function facingTile(playerX: number, playerY: number, dir: Direction): { 
 export function clamp(val: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, val));
 }
+
+// ─── CITY LIFE TYPES ───
+
+export enum CityInteractionKind {
+  OFFICE_WORK = 'office_work',
+  APARTMENT_DOOR = 'apartment_door',
+  SHOP_GROCERY = 'shop_grocery',
+  SHOP_ELECTRONICS = 'shop_electronics',
+  SHOP_CLOTHING = 'shop_clothing',
+  BAR = 'bar',
+  RESTAURANT = 'restaurant',
+  CAFE = 'cafe',
+  GYM = 'gym',
+  BOOKSTORE = 'bookstore',
+  BUS_STOP = 'bus_stop',
+  COMMUNITY_GARDEN = 'community_garden',
+  PARK_BENCH = 'park_bench',
+  NPC_TALK = 'npc_talk',
+}
+
+export enum JobRank {
+  INTERN = 'intern',
+  JUNIOR = 'junior',
+  ASSOCIATE = 'associate',
+  SENIOR = 'senior',
+  MANAGER = 'manager',
+  DIRECTOR = 'director',
+  VP = 'vp',
+}
+
+export enum ApartmentTier {
+  STUDIO = 'studio',
+  ONE_BR = 'one_br',
+  TWO_BR = 'two_br',
+  PENTHOUSE = 'penthouse',
+}
+
+export enum CityVenue {
+  OFFICE = 'office',
+  CAFE = 'cafe',
+  BAR = 'bar',
+  RESTAURANT = 'restaurant',
+  GYM = 'gym',
+  PARK = 'park',
+  BOOKSTORE = 'bookstore',
+  ELECTRONICS = 'electronics',
+  CLOTHING = 'clothing',
+  GROCERY = 'grocery',
+  APARTMENT = 'apartment',
+  COMMUNITY_GARDEN = 'community_garden',
+}
+
+export interface JobState {
+  rank: JobRank;
+  daysWorked: number;
+  streak: number;
+  performanceRating: number; // 0-100
+  salary: number;
+  workedToday: boolean;
+}
+
+export interface ApartmentState {
+  tier: ApartmentTier;
+  furniture: string[]; // item IDs placed
+  comfortScore: number; // 0-100, affects stamina recovery
+}
+
+export interface CityNPCDef {
+  id: string;
+  name: string;
+  role: string;
+  personality: string;
+  defaultVenue: CityVenue;
+  lovedItems: string[];
+  likedItems: string[];
+  hatedItems: string[];
+  dialogue: Record<string, string[]>;
+}
+
+export interface CityEvent {
+  id: string;
+  name: string;
+  season: Season;
+  day: number;
+  venue: CityVenue;
+  description: string;
+}
+
+export const JOB_SALARY: Record<JobRank, number> = {
+  [JobRank.INTERN]: 100,
+  [JobRank.JUNIOR]: 200,
+  [JobRank.ASSOCIATE]: 400,
+  [JobRank.SENIOR]: 700,
+  [JobRank.MANAGER]: 1200,
+  [JobRank.DIRECTOR]: 2000,
+  [JobRank.VP]: 3500,
+};
+
+export const APARTMENT_UPGRADE_COST: Record<ApartmentTier, number> = {
+  [ApartmentTier.STUDIO]: 0,
+  [ApartmentTier.ONE_BR]: 5000,
+  [ApartmentTier.TWO_BR]: 15000,
+  [ApartmentTier.PENTHOUSE]: 50000,
+};
+
+export const CITY_SAVE_KEY = 'hearthfield_city_save';
