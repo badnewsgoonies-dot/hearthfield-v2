@@ -12,6 +12,7 @@ import { MineScene } from './scenes/MineScene';
 import { FishingScene } from './scenes/FishingScene';
 
 import { InteriorScene } from './scenes/InteriorScene';
+import { CityPlayScene } from './scenes/CityPlayScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -36,7 +37,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, IntroScene, PlayScene, UIScene, ShopScene, MineScene, FishingScene, InteriorScene],
+  scene: [BootScene, MenuScene, IntroScene, PlayScene, UIScene, ShopScene, MineScene, FishingScene, InteriorScene, CityPlayScene],
 };
 
 new Phaser.Game(config);

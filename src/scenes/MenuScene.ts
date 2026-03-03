@@ -513,7 +513,7 @@ export class MenuScene extends Phaser.Scene {
     prompt.style.minWidth = '280px';
 
     const label = document.createElement('label');
-    label.textContent = 'Enter your farmer name:';
+    label.textContent = this.pendingMode === 'city' ? 'Enter your city name:' : 'Enter your farmer name:';
     label.style.color = '#eef9d7';
     label.style.fontSize = '14px';
 
@@ -554,9 +554,10 @@ export class MenuScene extends Phaser.Scene {
     prompt.appendChild(row);
 
     const startGame = () => {
-      const playerName = input.value.trim() || 'Farmer';
+      const playerName = input.value.trim() || (this.pendingMode === 'city' ? 'Player' : 'Farmer');
+      const targetScene = this.pendingMode === 'city' ? Scenes.CITY_PLAY : Scenes.INTRO;
       this.cleanupDom();
-      this.beginSceneTransition(() => this.scene.start(Scenes.INTRO, { playerName }));
+      this.beginSceneTransition(() => this.scene.start(targetScene, { playerName }));
     };
 
     startBtn.addEventListener('click', startGame);
