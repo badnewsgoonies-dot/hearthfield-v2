@@ -387,6 +387,8 @@ export const Scenes = {
   INTRO:     'IntroScene',
   PLAY:      'PlayScene',
   UI:        'UIScene',        // runs parallel to PlayScene as overlay
+  CITY_PLAY: 'CityPlayScene',
+  CITY_UI:   'CityUIScene',
 } as const;
 
 // ════════════════════════════════════════════════════════════

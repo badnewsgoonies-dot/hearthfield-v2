@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SAVE_KEY, Scenes } from '../types';
+import { SAVE_KEY, CITY_SAVE_KEY, Scenes } from '../types';
 
 interface Cloud {
   x: number;
@@ -42,6 +42,7 @@ export class MenuScene extends Phaser.Scene {
   private menuButtons: MenuButton[] = [];
   private controlsOverlay?: Phaser.GameObjects.Container;
   private animTime = 0;
+  private pendingMode: 'farm' | 'city' = 'farm';
 
   private namePrompt?: HTMLDivElement;
   private promptReposition?: () => void;
@@ -79,7 +80,7 @@ export class MenuScene extends Phaser.Scene {
       .setY(74);
 
     this.subtitleText = this.add
-      .text(centerX, 152, 'A farming adventure', {
+      .text(centerX, 152, 'Farm life or city life — you choose', {
         fontFamily: 'monospace',
         fontSize: '24px',
         color: '#fff3bd',
@@ -92,17 +93,28 @@ export class MenuScene extends Phaser.Scene {
       .setY(138);
 
     const hasSave = this.hasSaveData();
-    const baseY = 420;
+    const hasCitySave = this.hasCitySaveData();
+    const baseY = 380;
 
-    const newGameBtn = this.createMenuButton('New Game', baseY, true, () => {
+    const newFarmBtn = this.createMenuButton('🌾  New Farm', baseY, true, () => {
+      this.pendingMode = 'farm';
       this.openNamePrompt();
     });
 
-    const continueBtn = this.createMenuButton('Continue', baseY + 62, hasSave, () => {
+    const continueFarmBtn = this.createMenuButton('🌾  Continue Farm', baseY + 52, hasSave, () => {
       this.beginSceneTransition(() => this.scene.start(Scenes.PLAY, { loadSave: true }));
     });
 
-    this.menuButtons = [newGameBtn, continueBtn];
+    const newCityBtn = this.createMenuButton('🏙️  New City', baseY + 114, true, () => {
+      this.pendingMode = 'city';
+      this.openNamePrompt();
+    });
+
+    const continueCityBtn = this.createMenuButton('🏙️  Continue City', baseY + 166, hasCitySave, () => {
+      this.beginSceneTransition(() => this.scene.start(Scenes.CITY_PLAY, { loadSave: true }));
+    });
+
+    this.menuButtons = [newFarmBtn, continueFarmBtn, newCityBtn, continueCityBtn];
 
     this.versionText = this.add
       .text(width - 14, height - 12, 'v0.1.0', {
@@ -140,7 +152,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     this.tweens.add({
-      targets: [newGameBtn.container, continueBtn.container, this.versionText],
+      targets: [newFarmBtn.container, continueFarmBtn.container, newCityBtn.container, continueCityBtn.container, this.versionText],
       alpha: 1,
       y: '+=0',
       duration: 700,
@@ -400,6 +412,15 @@ export class MenuScene extends Phaser.Scene {
   private hasSaveData(): boolean {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
+      return Boolean(raw && raw.trim().length > 0);
+    } catch {
+      return false;
+    }
+  }
+
+  private hasCitySaveData(): boolean {
+    try {
+      const raw = localStorage.getItem(CITY_SAVE_KEY);
       return Boolean(raw && raw.trim().length > 0);
     } catch {
       return false;
