@@ -18,7 +18,7 @@ import { CityEventHandler } from '../systems/cityEvents';
 
 // ─── CONSTANTS ───
 const CITY_WIDTH = 40;
-const CITY_HEIGHT = 25;
+const CITY_HEIGHT = 30; // matches FARM_HEIGHT; park/decorations extend to row 27
 const MAP_PX_W = CITY_WIDTH * SCALED_TILE;
 const MAP_PX_H = CITY_HEIGHT * SCALED_TILE;
 const INTERACT_RANGE = SCALED_TILE * 1.8;
@@ -199,33 +199,34 @@ export class CityPlayScene extends Phaser.Scene {
     const T = SCALED_TILE;
     for (const b of CITY_LAYOUT.buildings) {
       let container: Phaser.GameObjects.Container | null = null;
-      const wx = b.x * T;
-      const wy = b.y * T;
 
+      // CityRenderer methods take tile coords and multiply by T internally
       switch (b.venue) {
         case CityVenue.OFFICE:
-          container = CityRenderer.drawOffice(this, wx, wy, T);
+          container = CityRenderer.drawOffice(this, b.x, b.y, T);
           break;
         case CityVenue.CAFE:
-          container = CityRenderer.drawCoffeeShop(this, wx, wy, T);
+          container = CityRenderer.drawCoffeeShop(this, b.x, b.y, T);
           break;
         case CityVenue.RESTAURANT:
-          container = CityRenderer.drawRestaurant(this, wx, wy, T);
+          container = CityRenderer.drawRestaurant(this, b.x, b.y, T);
           break;
         case CityVenue.BAR:
-          container = CityRenderer.drawBar(this, wx, wy, T);
+          container = CityRenderer.drawBar(this, b.x, b.y, T);
           break;
         case CityVenue.APARTMENT:
-          container = CityRenderer.drawApartment(this, wx, wy, T, b.name.includes('Player'));
+          container = CityRenderer.drawApartment(this, b.x, b.y, T, b.name.includes('Player'));
           break;
         case CityVenue.GYM:
-          container = CityRenderer.drawGym(this, wx, wy, T);
+          container = CityRenderer.drawGym(this, b.x, b.y, T);
           break;
         case CityVenue.BOOKSTORE:
-          container = CityRenderer.drawBookstore(this, wx, wy, T);
+          container = CityRenderer.drawBookstore(this, b.x, b.y, T);
           break;
-        default:
-          // Generic building — simple colored rect
+        default: {
+          // Generic building — simple colored rect positioned in pixel space
+          const wx = b.x * T;
+          const wy = b.y * T;
           const g = this.add.graphics();
           g.fillStyle(b.color, 1);
           g.fillRect(0, 0, b.width * T, b.height * T);
@@ -241,6 +242,7 @@ export class CityPlayScene extends Phaser.Scene {
             container = this.add.container(wx, wy, [g]);
           }
           break;
+        }
       }
 
       if (container) {
@@ -254,31 +256,32 @@ export class CityPlayScene extends Phaser.Scene {
   private renderDecorations() {
     const T = SCALED_TILE;
     for (const d of CITY_LAYOUT.decorations) {
-      const wx = d.x * T;
-      const wy = d.y * T;
+      // CityRenderer methods take tile coords and multiply by T internally
       let obj: Phaser.GameObjects.Container | null = null;
 
       switch (d.type) {
         case 'streetlight':
-          obj = CityRenderer.drawStreetLamp(this, wx, wy, T);
+          obj = CityRenderer.drawStreetLamp(this, d.x, d.y, T);
           break;
         case 'bench':
-          obj = CityRenderer.drawBench(this, wx, wy, T);
+          obj = CityRenderer.drawBench(this, d.x, d.y, T);
           break;
         case 'fountain':
-          obj = CityRenderer.drawFountain(this, wx, wy, T);
+          obj = CityRenderer.drawFountain(this, d.x, d.y, T);
           break;
         case 'bus_sign':
-          obj = CityRenderer.drawBusStop(this, wx, wy, T);
+          obj = CityRenderer.drawBusStop(this, d.x, d.y, T);
           break;
         case 'fire_hydrant':
-          obj = CityRenderer.drawHydrant(this, wx, wy, T);
+          obj = CityRenderer.drawHydrant(this, d.x, d.y, T);
           break;
         case 'mailbox':
-          obj = CityRenderer.drawMailbox(this, wx, wy, T);
+          obj = CityRenderer.drawMailbox(this, d.x, d.y, T);
           break;
         default: {
-          // Simple colored rectangle for unlisted types
+          // Simple colored rectangle for unlisted types (positioned in pixel space)
+          const wx = d.x * T;
+          const wy = d.y * T;
           const g = this.add.graphics();
           g.fillStyle(0x888888, 1);
           g.fillRect(0, 0, T * 0.5, T * 0.5);
@@ -287,7 +290,7 @@ export class CityPlayScene extends Phaser.Scene {
         }
       }
       if (obj) {
-        obj.setDepth(ySortDepth(wy + T));
+        obj.setDepth(ySortDepth(d.y * T + T));
         this.decoLayer.add(obj);
       }
     }
@@ -666,9 +669,10 @@ export class CityPlayScene extends Phaser.Scene {
 
     const hearts = this.relationships[npcId] ?? 0;
     const pool = npc.dialoguePool ?? {};
-    // Pick bracket: 0-2 hearts = 'low', 3-5 = 'mid', 6+ = 'high'
-    const bracket = hearts >= 300 ? 'high' : hearts >= 100 ? 'mid' : 'low';
-    const lines = pool[bracket] ?? pool['low'] ?? Object.values(pool)[0] ?? [];
+    // Pick bracket matching CITY_NPCS dialoguePool keys: '0', '1-3', '4-6', '7-10'
+    const heartLevel = Math.floor(hearts / 100); // 0-10 scale
+    const bracket = heartLevel === 0 ? '0' : heartLevel <= 3 ? '1-3' : heartLevel <= 6 ? '4-6' : '7-10';
+    const lines = pool[bracket] ?? pool['0'] ?? Object.values(pool)[0] ?? [];
     const line = lines.length > 0
       ? lines[Math.floor(Math.random() * lines.length)]
       : 'Nice to see you!';
